@@ -31,6 +31,7 @@ pick_python() {
   if [ -n "${SHOPLOG_PY:-}" ] && [ -x "$SHOPLOG_PY" ]; then echo "$SHOPLOG_PY"; return; fi
   local cands=(
     "$(command -v python3 || true)"
+    "$HOME/.local/share/uv/python/cpython-3.14-macos-aarch64-none/bin/python3.14" \
     "$HOME/Library/Application Support/com.tencent.mac.marvis/components/MarvisAgent/Versions/1.0.0.10409/runtime/python311/bin/python3.11"
     "$(command -v python3.11 || true)"
     "$(command -v python3.12 || true)"

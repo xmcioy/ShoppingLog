@@ -14,6 +14,7 @@ PY="${SHOPLOG_PY:-$(command -v python3 || echo python3)}"
 if [ -f "$APP/config.local.json" ] && grep -q '"engine"[[:space:]]*:[[:space:]]*"mysql"' "$APP/config.local.json"; then
   if ! "$PY" -c "import pymysql" >/dev/null 2>&1; then
     for cand in \
+      "$HOME/.local/share/uv/python/cpython-3.14-macos-aarch64-none/bin/python3.14" \
       "$HOME/Library/Application Support/com.tencent.mac.marvis/components/MarvisAgent/Versions/1.0.0.10409/runtime/python311/bin/python3.11" \
       "$(command -v python3.11 || true)"; do
       if [ -n "$cand" ] && [ -x "$cand" ] && "$cand" -c "import pymysql" >/dev/null 2>&1; then PY="$cand"; break; fi
