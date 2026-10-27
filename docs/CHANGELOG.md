@@ -5,6 +5,33 @@
 
 ---
 
+## 0.6.7（2026-10-28）
+
+**修：品类扩展表列漂移导致记录列表直接 500**
+
+- 现象：打开个人页 / 调 `GET /api/items`、`GET /api/public` 时连接被服务端直接断开
+  （客户端表现为 `RemoteDisconnected`）。任何有记录的账号都中招。
+- 根因：品类扩展表的列定义有两份 —— `scripts/shop.py` 的 `EXT_SCHEMAS`（查询投影由它
+  生成）和 `docs/schema.sql`（建表语句）。`beauty_items` 在 schema.sql 里少了
+  `allergens / eating_method / standard_no` 三列，而 LEFT JOIN 的投影按 `EXT_SCHEMAS`
+  生成，于是 SQLite 报 `no such column: beauty_items.allergens`。
+- 修法：
+  - `docs/schema.sql` 的 `beauty_items` 补齐三列；
+  - `ensure_schema()` 增加「按 `shop.EXT_SCHEMAS` 给扩展表补列」的兜底，旧库（含两份
+    定义不同步的库）启动时自动自愈，以后只改代码定义也不会再炸。
+- 测试：新增 2 个用例（两份列定义一致性静态比对；美妆类字段存读回归），47 → 49 个，全绿。
+
+## 0.6.6（2026-10-28）
+
+- 运行环境升级到 Python 3.14（uv 管理）：`run.sh` / `deploy.sh` / `install-service.sh`
+  的候选解释器首位改为 uv 的 `python3.14`，MySQL 模式依赖（pymysql）已在公共 site-packages 里。
+- 终端 `python3` 默认指向 3.14.7（`~/.zshrc` 前置 `~/.local/bin`）。
+
+## 0.6.5（2026-10-27）
+
+- 仓库治理：压缩全部历史为单次提交（0.6.5 全量快照），旧历史已备份成 git bundle；
+  删除早期 Markdown 方案的残留目录，运行数据统一留在 `~/myapp/shoppinglog`。
+
 ## 0.6.2（2026-10-24）
 
 **健康评分收敛到后端 + 按健康档次筛选（A/B/C/D）**

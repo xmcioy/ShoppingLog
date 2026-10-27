@@ -247,6 +247,14 @@ def ensure_schema():
                  (__import__("datetime").date.today().isoformat(),))
     conn.execute("CREATE INDEX IF NOT EXISTS idx_purchases_item ON purchases(item_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_purchases_user_date ON purchases(user_id, purchase_date)")
+    # 品类扩展表补列：列定义的权威源是 shop.EXT_SCHEMAS（查询投影由它生成），
+    # docs/schema.sql 是同一份定义的落盘副本。两处曾经漂移过 —— beauty_items 少了
+    # allergens / eating_method / standard_no，而 /api/items 的 LEFT JOIN 投影是按
+    # EXT_SCHEMAS 生成的，于是每次拉列表都报 "no such column" 直接 500。
+    # 这里按代码定义兜底补列：新库由 schema.sql 建好后无副作用，旧库（含两处定义
+    # 不同步的库）启动时自动自愈。
+    for _t, _cols in shop.EXT_SCHEMAS.items():
+        _add_missing_columns(conn, _t, [(c, "TEXT") for c in _cols])
     conn.commit()
     created = bootstrap_admin(conn)
     conn.close()

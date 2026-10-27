@@ -35,6 +35,7 @@ PY = sys.executable
 sys.path.insert(0, str(SCRIPTS))
 import version  # 版本号唯一来源：仓库根 VERSION 文件
 import health_score  # 健康评分（纯规则，服务端唯一权威）
+import shop  # 品类扩展表路由 + 列定义（查询投影由它生成）
 
 CASES = []
 
@@ -917,6 +918,34 @@ def t_shared_star_half(s):
     assert_true(d["hc85"], "健康分 85 应返回颜色")
     assert_eq(d["grade"], "A", "85 分应为 A 级")
     assert_true("千焦" in d["nutri"], "营养单位应统一为中文（千焦/克/毫克）")
+
+
+@case("建表：品类扩展表列定义 shop.EXT_SCHEMAS 与 docs/schema.sql 一致")
+def t_ext_schema_in_sync(s):
+    """两份定义漂移过一次：beauty_items 少列，而 /api/items 的 LEFT JOIN 投影按
+    shop.EXT_SCHEMAS 生成，结果拉列表必报 “no such column” → 连接直接断开。
+    这里守住两份定义，防止再漂移。"""
+    txt = (ROOT / "docs" / "schema.sql").read_text(encoding="utf-8")
+    for t, cols in shop.EXT_SCHEMAS.items():
+        m = re.search(r"CREATE TABLE IF NOT EXISTS %s \((.*?)\);" % t, txt, re.S)
+        assert_true(m, f"docs/schema.sql 缺少品类扩展表 {t}")
+        have = set(re.findall(r"([a-z_]+)\s+(?:TEXT|INTEGER|REAL|VARCHAR)", m.group(1)))
+        have.discard("item_id")
+        assert_eq(sorted(have), sorted(cols), f"扩展表 {t} 的列定义与 shop.EXT_SCHEMAS 不一致")
+
+
+@case("品类扩展表：美妆类字段可存可读（回归 schema.sql 缺列导致列表 500）")
+def t_beauty_ext_roundtrip(s):
+    tok = s.make_user("ubt", "Ubt@123456")
+    code, d = s.post("/api/add", {
+        "name": "保湿面霜", "price": 99, "category": "美妆护肤",
+        "allergens": "含香精", "standard_no": "GB/T 29665",
+        "eating_method": "洁面后取适量涂抹"}, tok)
+    assert_eq(code, 200, "新增美妆商品应成功")
+    rows = s.get("/api/items", tok)[1]["items"]
+    row = [it for it in rows if it["id"] == d["id"]][0]
+    assert_eq(row.get("allergens"), "含香精", "allergens 应能读回")
+    assert_eq(row.get("standard_no"), "GB/T 29665", "standard_no 应能读回")
 
 
 # ---------------------------------------------------------------- 健康评分

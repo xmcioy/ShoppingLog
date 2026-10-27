@@ -126,9 +126,9 @@ CREATE TABLE IF NOT EXISTS beauty_items (
     item_id INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
     shelf_life TEXT, produced_date TEXT, expiry_date TEXT,
     ingredients TEXT, manufacturer TEXT, manufacturer_address TEXT,
-    manufacturer_phone TEXT, tips TEXT, license TEXT, origin TEXT,
-    storage_condition TEXT, service_hotline TEXT, specs TEXT,
-    image_desc TEXT
+    manufacturer_phone TEXT, tips TEXT, allergens TEXT, license TEXT,
+    origin TEXT, storage_condition TEXT, service_hotline TEXT, specs TEXT,
+    eating_method TEXT, standard_no TEXT, image_desc TEXT
 );
 CREATE TABLE IF NOT EXISTS clothing_items (
     item_id INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
