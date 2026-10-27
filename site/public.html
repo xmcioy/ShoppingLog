@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>公开广场 · ShoppingLog</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+<meta name="description" content="所有用户公开分享的商品评价，无需登录即可浏览">
+<style>
+:root{
+  --bg:#f5f6fa; --panel:#ffffff; --panel2:#f0f2f8;
+  --text:#1d2433; --muted:#6b7488; --line:#e6e9f2;
+  --accent:#5b6cff; --accent2:#8a5cff; --good:#22a06b; --bad:#e5484d; --warn:#e8935a;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.08);
+  --radius:14px;
+}
+[data-theme="dark"]{
+  --bg:#0f1219; --panel:#171b26; --panel2:#1e2330;
+  --text:#e8ecf5; --muted:#9aa3b8; --line:#2a3040;
+  --accent:#7b8cff; --accent2:#a88cff; --good:#34c98a; --bad:#ff6b6b; --warn:#f0a05a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text); min-height:100vh;
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px 56px}
+
+/* 顶部渐变横幅 */
+.hero{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff; padding:26px 0 46px; margin-bottom:-28px;
+}
+.hero .wrap{padding-bottom:0}
+.hero-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.3px}
+.hero-sub{margin:8px 0 0;font-size:13px;opacity:.92;max-width:700px;line-height:1.7}
+.hero-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.hero-actions a,.hero-actions button{
+  display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;border-radius:10px;
+  padding:8px 13px;font-size:13px;font-weight:600;text-decoration:none;
+  background:rgba(255,255,255,.18);color:#fff;transition:.15s
+}
+.hero-actions a:hover,.hero-actions button:hover{background:rgba(255,255,255,.3)}
+
+.panel{
+  background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px;position:relative
+}
+.searchbar{display:flex;gap:10px;margin-bottom:6px}
+.hchips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}
+.hchips .hc{border:1px solid var(--line);background:var(--panel);color:var(--muted);
+  border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;user-select:none;transition:.15s}
+.hchips .hc:hover{border-color:var(--accent);color:var(--accent)}
+.hchips .hc.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.searchbar input{
+  flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:10px;padding:10px 13px;font-size:14px;outline:none
+}
+.searchbar input:focus{border-color:var(--accent)}
+.stat{font-size:12px;color:var(--muted);margin:10px 0 0}
+
+/* ---- 商品分组 ---- */
+.group{margin-top:20px}
+.group-hd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:0 2px 8px}
+.group-name{font-size:16px;font-weight:800}
+.group-meta{font-size:11px;color:var(--muted)}
+.badge{font-size:10px;padding:1px 7px;border-radius:6px;background:var(--accent);color:#fff}
+.badge.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+
+/* ---- 小红书式大图瀑布卡片 ---- */
+/* auto-fit 会折叠空轨道：某个分组只有 2~3 条时自动均分整行，不留空洞 */
+.feed{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:14px}
+.feed.one{grid-template-columns:1fr}
+.post{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;
+  transition:transform .15s,box-shadow .15s
+}
+/* 单条记录：左图右文的「主推」横向卡，避免整页只有一个竖图旁边全空 */
+.post.wide{display:grid;grid-template-columns:minmax(240px,40%) 1fr;align-items:stretch}
+.post.wide .pic{aspect-ratio:auto;height:100%;min-height:300px}
+.post.wide .p-body{padding:16px 18px}
+.post:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(16,24,40,.16)}
+.pic{
+  position:relative;width:100%;aspect-ratio:3/4;background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in
+}
+.pic img{width:100%;height:100%;object-fit:cover;display:block}
+.pic .ph{font-size:52px;opacity:.35}
+.pic .n-img{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;border-radius:8px;padding:2px 8px}
+.pic .hp{
+  position:absolute;left:8px;top:8px;color:#fff;font-size:11px;font-weight:800;
+  border-radius:8px;padding:2px 8px
+}
+.pic .rp{
+  position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.92);color:#e5484d;
+  font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px
+}
+
+.p-body{padding:11px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.p-title{
+  font-size:14px;font-weight:700;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.p-meta{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px}
+.p-meta b{color:var(--accent2);font-weight:600}
+.p-owner{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.avatar{
+  width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:700
+}
+.p-owner .nm{font-weight:600;color:var(--text)}
+/* .stars 星级样式（含半星）由 shared.js 注入，此处不再重复定义 */
+.p-text{font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.p-text.empty{color:var(--muted);font-style:italic}
+.p-note{
+  font-size:12px;line-height:1.6;color:var(--accent);
+  background:var(--panel2);border-radius:8px;padding:6px 9px
+}
+.p-tags{display:flex;flex-wrap:wrap;gap:5px}
+.p-tags span{font-size:10px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:1px 8px}
+
+/* 默认折叠的详情块 */
+details.extra{margin-top:8px;font-size:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:0 10px}
+details.extra summary{cursor:pointer;color:var(--accent);font-weight:600;padding:8px 0;list-style:none;user-select:none}
+details.extra summary::-webkit-details-marker{display:none}
+details.extra[open] summary{border-bottom:1px dashed var(--line)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 14px;margin:8px 0 6px}
+.kv div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:3px 0;gap:8px}
+.kv b{font-weight:600}
+.kv span{color:var(--muted);text-align:right}
+.nutri{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+.nutri td,.nutri th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}
+.nutri td.hi{color:var(--bad);font-weight:700}
+.nutri td.mid{color:var(--warn);font-weight:600}
+.ing{color:var(--muted);margin:6px 0;font-size:12px;line-height:1.6}
+.note{background:var(--panel);border-left:3px solid var(--accent);border-radius:6px;padding:8px 10px;color:var(--muted);line-height:1.6;white-space:pre-line;margin:6px 0}
+
+/* 分页 */
+.pager{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.pager button{
+  border:1px solid var(--line);background:var(--panel);color:var(--text);
+  border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer
+}
+.pager button:hover:not(:disabled){border-color:var(--accent)}
+.pager button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+
+.msg{font-size:12px;color:var(--muted);margin-top:14px;text-align:center;min-height:18px}
+.msg.bad{color:var(--bad)}
+.foot{text-align:center;font-size:11px;color:var(--muted);margin-top:26px;line-height:1.8}
+.foot a{color:var(--accent);text-decoration:none}
+
+/* 大图查看 */
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px}
+#lb.on{display:flex}
+#lb img{max-width:92vw;max-height:80vh;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#lb .cap{color:#fff;font-size:13px}
+#lb .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.14);border:0;color:#fff;font-size:26px;width:46px;height:46px;border-radius:50%;cursor:pointer}
+#lb .nav:hover{background:rgba(255,255,255,.28)}
+#lb .prev{left:16px}#lb .next{right:16px}
+#lb .close{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.14);border:0;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer}
+
+/* 右下角版本号徽标（用于确认线上部署到哪了） */
+.ver-badge{
+  position:fixed;right:14px;bottom:14px;z-index:80;
+  font-size:11px;line-height:1;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:6px 11px;box-shadow:var(--shadow);opacity:.82;
+  cursor:default;user-select:none;backdrop-filter:blur(6px);
+}
+.ver-badge:hover{opacity:1;color:var(--text)}
+
+@media (max-width:700px){
+  .post.wide{grid-template-columns:1fr}
+  .post.wide .pic{aspect-ratio:3/4;height:auto;min-height:0}
+}
+@media (max-width:600px){
+  .hero{padding:20px 0 40px}
+  .hero h1{font-size:19px}
+  .hero-actions{margin-left:0;width:100%}
+  .panel{padding:14px}
+  .feed{grid-template-columns:repeat(2,1fr);gap:10px}
+  .p-title{font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<div class="ver-badge" id="verBadge" title="当前部署版本">v…</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-top">
+      <h1>🌐 公开广场</h1>
+      <div class="hero-actions">
+        <button type="button" id="themeBtn">🌙 深色</button>
+        <a href="/">我的记录</a>
+      </div>
+    </div>
+    <p class="hero-sub">
+      所有用户标记为「公开」的商品评价，<b>图片优先</b>的大图卡片流 —— <b>同一件商品，不同人有各自的看法。</b><br>
+      成分表、营养、使用方法等信息都在这里展示（默认折叠，点开即可）。<br>
+      <b>价格、购买时间、渠道、地点、生产日期与到期日等购买记录不会公开。</b>
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="panel">
+    <div class="searchbar">
+      <input type="search" id="q" placeholder="搜索商品 / 品牌 / 分类…" autocomplete="off">
+    </div>
+    <!-- 健康档次筛选：A/B/C/D 由后端 health_score 换算（阈值与后端 GRADE_BANDS 一致），
+         none = 还没有健康评分的商品（多半没填营养与配料） -->
+    <div class="hchips" id="hchips"></div>
+    <div class="stat" id="stat">加载中…</div>
+    <div id="list"></div>
+    <div class="pager" id="pager"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <p class="foot">
+    无需登录即可浏览 · 想分享自己的评价？<a href="/login.html">登录后</a>新增记录时选择「公开」即可。
+  </p>
+</main>
+
+<div id="lb">
+  <button class="close" type="button" id="lbClose">✕</button>
+  <button class="nav prev" type="button" id="lbPrev">‹</button>
+  <img id="lbImg" src="" alt="">
+  <div class="cap" id="lbCap"></div>
+  <button class="nav next" type="button" id="lbNext">›</button>
+</div>
+
+<!-- 展示层公共库：esc / starStr（半星）/ healthColor / nutriTable 等。
+     改展示逻辑只改这一个文件，个人页与公开广场同时生效。
+     注意：本页免登录，nginx 必须放行 /shared.js -->
+<script src="/shared.js"></script>
+<script>
+/* ---------------- 基础工具 ---------------- */
+const $ = id => document.getElementById(id);
+/* 图片统一走 /api/public-image？p=... ：
+   nginx 对 /images/* 要求登录，公开广场是免登录页，直连会被 302 到登录页导致图片全裂；
+   该接口由后端逐张校验「这张图确实属于某条公开记录」后才流出。 */
+function normPath(p){
+  const s=String(p||"").trim().replace(/^\/+/,"");
+  if(!s) return "";
+  return "/api/public-image?p="+encodeURIComponent(s);
+}
+
+/* 注：esc / healthColor / starStr(半星) / initial / NUTRI_* / nutriTable 全部来自 shared.js，
+   此处不再重复定义，避免两页实现漂移（公开页旧版 stars() 取整，半星显示不出来）。 */
+
+/* ---------------- 主题 ---------------- */
+(function initTheme(){
+  const saved=localStorage.getItem("sl_theme");
+  const dark=saved? saved==="dark"
+    : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark?"dark":"light");
+  const btn=$("themeBtn");
+  btn.textContent = dark ? "☀️ 浅色" : "🌙 深色";
+})();
+$("themeBtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("sl_theme", next);
+  $("themeBtn").textContent = next==="dark" ? "☀️ 浅色" : "🌙 深色";
+};
+
+/* ---------------- 大图查看 ---------------- */
+const lb={imgs:[],i:0};
+function openLb(imgs,i){
+  lb.imgs=imgs||[]; lb.i=i||0;
+  if(!lb.imgs.length) return;
+  showLb();
+  $("lb").classList.add("on");
+}
+function showLb(){
+  $("lbImg").src=normPath(lb.imgs[lb.i]);
+  $("lbCap").textContent=(lb.i+1)+" / "+lb.imgs.length;
+  const multi=lb.imgs.length>1;
+  $("lbPrev").style.display=multi?"":"none";
+  $("lbNext").style.display=multi?"":"none";
+}
+function stepLb(d){
+  if(lb.imgs.length<2) return;
+  lb.i=(lb.i+d+lb.imgs.length)%lb.imgs.length;
+  showLb();
+}
+$("lbClose").onclick=()=>$("lb").classList.remove("on");
+$("lbPrev").onclick=e=>{e.stopPropagation();stepLb(-1)};
+$("lbNext").onclick=e=>{e.stopPropagation();stepLb(1)};
+$("lb").onclick=e=>{ if(e.target.id==="lb") $("lb").classList.remove("on"); };
+document.addEventListener("keydown",e=>{
+  if(!$("lb").classList.contains("on")) return;
+  if(e.key==="Escape") $("lb").classList.remove("on");
+  if(e.key==="ArrowLeft") stepLb(-1);
+  if(e.key==="ArrowRight") stepLb(1);
+});
+
+/* ---------------- 数据 ---------------- */
+const state={page:1,size:10,pages:0,total:0,groups:[],grade:""};
+
+/* 健康档次筛选（后端按 health_score 换算，阈值与 shared.js 的 healthGrade 一致） */
+const GRADES=[["","全部"],["A","A 优秀"],["B","B 良好"],["C","C 一般"],["D","D 需注意"],["none","未评分"]];
+function renderHchips(){
+  $("hchips").innerHTML = GRADES.map(([v,label])=>
+    `<span class="hc${state.grade===v?" on":""}" data-g="${esc(v)}">${esc(label)}</span>`).join("");
+  $("hchips").querySelectorAll(".hc").forEach(el=>{
+    el.onclick=()=>{ state.grade=el.dataset.g; state.page=1; renderHchips(); load(); };
+  });
+}
+
+function load(){
+  const q=($("q").value||"").trim();
+  const url="/api/public?page="+state.page+"&size="+state.size+(q?"&q="+encodeURIComponent(q):"")
+    +(state.grade?"&grade="+encodeURIComponent(state.grade):"");
+  $("stat").textContent="加载中…";
+  $("msg").textContent=""; $("msg").className="msg";
+
+  fetch(url,{headers:{"Accept":"application/json"}})
+    .then(r=>{
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(d=>{
+      if(!d || !d.ok) throw new Error((d&&d.error)||"接口返回异常");
+      if(!Array.isArray(d.groups)){
+        throw new Error("服务端版本过旧（/api/public 未返回分组），请更新后端后重启");
+      }
+      state.page=d.page||1;
+      state.pages=d.pages||0;
+      state.total=d.total||0;
+      state.groups=d.groups||[];
+      $("stat").textContent = state.total
+        ? `共 ${state.total} 件商品 · 第 ${state.page}/${state.pages||1} 页`
+        : "";
+      render();
+    })
+    .catch(e=>{
+      $("stat").textContent="";
+      $("list").innerHTML="";
+      $("pager").innerHTML="";
+      $("msg").className="msg bad";
+      $("msg").textContent="加载失败："+e.message;
+    });
+}
+
+/* 折叠详情：营养成分 + 配料表 / 使用方法 / 其他信息（默认折叠） */
+function detailBlocks(it){
+  const s = it.health_score!=null ? it.health_score : null;
+  const hg = it.health_grade || (s!=null ? healthGrade(s) : null);
+  const b1 = (it.ingredients || it.nutrition_analysis || it.health_reason || (it.nutrition && Object.keys(it.nutrition).length))
+    ? `<details class="extra"><summary>营养成分 + 配料表${s!=null?` · 健康指数 ${Math.round(s)}（${esc(hg||"")} ${esc(it.health_level||"")}）`:""}</summary>
+        ${nutriTable(it.nutrition)}
+        ${it.ingredients?`<div class="ing"><b>配料</b>：${esc(it.ingredients)}</div>`:""}
+        ${it.health_reason?`<div class="note">健康评分理由：${esc(it.health_reason)}</div>`:""}
+        ${it.nutrition_analysis?`<div class="note">${esc(it.nutrition_analysis)}</div>`:""}
+      </details>` : "";
+  const bUse = it.eating_method
+    ? `<details class="extra"><summary>使用方法</summary><div class="note">${esc(it.eating_method)}</div></details>` : "";
+  const rows = [
+    ["保质期", it.shelf_life], ["执行标准", it.standard_no], ["规格", it.specs],
+    ["产地", it.origin], ["贮存条件", it.storage_condition], ["过敏原", it.allergens],
+    ["生产商", it.manufacturer], ["厂址", it.manufacturer_address], ["温馨提示", it.tips],
+  ].filter(r=>r[1]!=null && String(r[1])!=="");
+  const bOther = rows.length
+    ? `<details class="extra"><summary>其他信息</summary>
+        <div class="kv">${rows.map(r=>`<div><b>${esc(r[0])}</b><span>${esc(String(r[1]))}</span></div>`).join("")}</div>
+      </details>` : "";
+  return b1+bUse+bOther;
+}
+
+/* 单条公开记录 = 一张大图卡片 */
+function postHTML(it, idx, wide){
+  const imgs = Array.isArray(it.images) ? it.images.filter(Boolean) : [];
+  const main = imgs.length ? normPath(imgs[0]) : "";
+  const pic = main
+    ? `<img src="${esc(main)}" alt="${esc(it.name||"")}" loading="lazy" data-post="${idx}">`
+      + (imgs.length>1?`<span class="n-img">${imgs.length} 张</span>`:"")
+    : `<span class="ph">🛍️</span>`;
+  const hg = it.health_grade || (it.health_score!=null ? healthGrade(it.health_score) : null);
+  const hp = it.health_score!=null
+    ? `<span class="hp" style="background:${healthColor(it.health_score)}" title="${esc(it.health_level||GRADE_LABEL[hg]||"")}">${esc(hg||"")} ${Math.round(it.health_score)}</span>` : "";
+  const rp = it.repurchase==="yes" ? `<span class="rp">会回购</span>`
+    : it.repurchase==="no" ? `<span class="rp" style="color:var(--muted)">不回购</span>` : "";
+  const brand = [it.category, it.brand, it.flavor_name].filter(Boolean)
+    .map(x=>`<span>${esc(x)}</span>`).join("");
+  const star = starStr(it.rating);  // shared.js：自带 .stars 包裹 + 半星
+  const tags = Array.isArray(it.tags)&&it.tags.length
+    ? `<div class="p-tags">${it.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>` : "";
+  const note = it.share_note ? `<div class="p-note">💬 ${esc(it.share_note)}</div>` : "";
+  const text = it.review
+    ? `<div class="p-text">${esc(it.review)}</div>`
+    : `<div class="p-text empty">（作者没有写文字评价）</div>`;
+  return `<article class="post${wide?" wide":""}" data-idx="${idx}">
+    <div class="pic" data-idx="${idx}">${pic}${hp}${rp}</div>
+    <div class="p-body">
+      <div class="p-title">${esc(it.name||"未命名")}</div>
+      ${brand?`<div class="p-meta">${brand}</div>`:""}
+      <div class="p-owner"><span class="avatar">${esc(initial(it.owner_name))}</span>
+        <span class="nm">${esc(it.owner_name||"匿名用户")}</span>${star}</div>
+      ${text}${tags}${note}
+      ${detailBlocks(it)}
+    </div>
+  </article>`;
+}
+
+function render(){
+  const box=$("list");
+  if(!state.groups.length){
+    box.innerHTML='<div class="msg">没有找到公开分享的商品。换个关键词试试，或等大家先分享。</div>';
+    $("pager").innerHTML="";
+    return;
+  }
+  let n=0;
+  box.innerHTML=state.groups.map(g=>{
+    const rows=g.items||[];
+    const owners=g.owner_count||rows.length;
+    const head=rows[0]||{};
+    return `<section class="group">
+      <div class="group-hd">
+        <span class="group-name">${esc(g.name)}</span>
+        ${owners>1?`<span class="badge">${owners} 人分享</span>`:'<span class="badge">公开</span>'}
+        ${rows.length>1?`<span class="badge ghost">${rows.length} 条评价</span>`:""}
+        ${head.category?`<span class="group-meta">${esc(head.category)}</span>`:""}
+        ${head.brand?`<span class="group-meta">${esc(head.brand)}</span>`:""}
+      </div>
+      <div class="feed${rows.length===1?" one":""}">
+        ${rows.map(it=>postHTML(it,n++,rows.length===1)).join("")}
+      </div>
+    </section>`;
+  }).join("");
+  /* 图片点击 → 大图（支持左右翻页） */
+  const all=[];
+  state.groups.forEach(g=>(g.items||[]).forEach(it=>{
+    all.push(Array.isArray(it.images)? it.images.filter(Boolean) : []);
+  }));
+  box.querySelectorAll(".pic").forEach(el=>{
+    el.onclick=()=>{ const i=+el.dataset.idx; openLb(all[i]||[], 0); };
+  });
+  renderPager();
+}
+
+function renderPager(){
+  const el=$("pager");
+  const {page,pages}=state;
+  if(!pages||pages<=1){ el.innerHTML=""; return; }
+  const start=Math.max(1,Math.min(page-2,pages-4));
+  const nums=[];
+  for(let p=start;p<=Math.min(pages,start+4);p++) nums.push(p);
+  el.innerHTML =
+    `<button data-p="${page-1}" ${page<=1?"disabled":""}>上一页</button>` +
+    nums.map(p=>`<button data-p="${p}" class="${p===page?"on":""}">${p}</button>`).join("") +
+    `<button data-p="${page+1}" ${page>=pages?"disabled":""}>下一页</button>`;
+  el.querySelectorAll("button").forEach(b=>{
+    b.onclick=()=>{
+      const p=+b.dataset.p;
+      if(p<1||p>pages||p===page) return;
+      state.page=p;
+      load();
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+  });
+}
+
+/* 搜索防抖 */
+let timer=null;
+$("q").oninput=()=>{
+  clearTimeout(timer);
+  timer=setTimeout(()=>{ state.page=1; load(); }, 300);
+};
+
+renderHchips();
+load();
+
+/* 右下角版本号：读免鉴权的 /api/version，用来确认线上跑到哪个版本 */
+(function(){
+  var el=document.getElementById("verBadge");
+  fetch("/api/version",{headers:{"Accept":"application/json"}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      el.textContent="v"+(d.version||"未知");
+      el.title="当前部署版本 v"+(d.version||"未知");
+    })
+    .catch(function(){ el.textContent="v未知"; });
+})();
+</script>
+</body>
+</html>

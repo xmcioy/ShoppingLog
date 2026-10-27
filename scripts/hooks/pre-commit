@@ -1,0 +1,36 @@
+#!/bin/bash
+# =============================================================================
+# ShoppingLog git pre-commit：确保「每次提交版本号都前进」
+#
+# 规则：本次提交若没手动改过 VERSION，就自动递增第三位（patch）并把它加入提交。
+#      想升第二位/第一位，请先 `bash scripts/bump_version.sh minor` 再提交，
+#      钩子发现 VERSION 已经变过就会放手，不会覆盖你的选择。
+#
+# 安装：bash scripts/install-hooks.sh
+# =============================================================================
+set -uo pipefail
+
+REPO="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "$REPO" ] || exit 0
+cd "$REPO"
+
+[ -f VERSION ] || exit 0
+
+# 已把 VERSION 加进这次提交 → 交给开发者（说明本次是手动定版本）
+if git diff --cached --name-only -- VERSION | grep -q .; then
+  exit 0
+fi
+
+CUR="$(cat VERSION 2>/dev/null || echo "")"
+HEAD_V="$(git show HEAD:VERSION 2>/dev/null || echo "")"
+
+# VERSION 与 HEAD 不同（说明工作区已经手动改过，只是还没 stage）→ 不干预，但提示
+if [ "$CUR" != "$HEAD_V" ]; then
+  echo "[pre-commit] VERSION 已是 ${CUR}（与 HEAD 的 ${HEAD_V:-<无>} 不同），记得 git add VERSION" >&2
+  exit 0
+fi
+
+bash scripts/bump_version.sh patch >/dev/null || exit 0
+git add VERSION
+echo "[pre-commit] 版本号自动递增 -> $(cat VERSION)"
+exit 0

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的购物记录库</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --line:#e6e8ec; --line-soft:#f0f2f5;
+  --text:#1c1f23; --text-2:#5b6472; --text-3:#94a0b0;
+  --accent:#2f6bff; --accent-soft:#eaf0ff;
+  --star:#f5a524; --up:#e5484d; --chip:#f2f4f7;
+  --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 20px 80px}
+header.top{margin-bottom:22px}
+h1{margin:0 0 6px;font-size:26px;letter-spacing:-.3px}
+.sub{color:var(--text-3);font-size:13px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 22px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .k{color:var(--text-3);font-size:12px;letter-spacing:.2px}
+.kpi .v{font-size:22px;font-weight:600;margin-top:4px;letter-spacing:-.4px}
+.kpi .v small{font-size:13px;font-weight:500;color:var(--text-3)}
+
+/* 面板 */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 12px;font-size:14px;font-weight:600;color:var(--text-2)}
+
+/* 筛选 */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type=search],select{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 11px;font-size:13px;color:var(--text);outline:none;font-family:inherit}
+input[type=search]{min-width:200px}
+input[type=search]:focus,select:focus{border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{border:1px solid var(--line);background:var(--chip);color:var(--text-2);border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer;user-select:none;transition:.15s}
+.chip:hover{border-color:#c9d2e0}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--text-2)}
+.btn:hover{border-color:#c9d2e0;color:var(--text)}
+.spacer{flex:1}
+
+/* 图表 */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar-row{display:grid;grid-template-columns:64px 1fr 92px;align-items:center;gap:10px;font-size:12.5px}
+.bar-track{background:var(--line-soft);height:9px;border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px}
+.bar-val{text-align:right;color:var(--text-2);font-variant-numeric:tabular-nums}
+.month-chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
+.month-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;min-width:0}
+.month-col .col{width:100%;max-width:34px;background:var(--accent);border-radius:5px 5px 2px 2px;min-height:2px}
+.month-col .lbl{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.month-col .amt{font-size:10px;color:var(--text-2);font-variant-numeric:tabular-nums}
+
+/* 卡片网格 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:.18s}
+.card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,24,40,.05),0 12px 28px rgba(16,24,40,.10)}
+.thumb{position:relative;aspect-ratio:1/1;background:linear-gradient(135deg,#f3f5f8,#eceff3);cursor:zoom-in;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{font-size:30px;opacity:.35}
+.thumb .n-img{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 7px;border-radius:99px}
+.body{padding:12px 13px 13px;display:flex;flex-direction:column;gap:6px;flex:1}
+.nm{font-weight:600;font-size:14.5px;line-height:1.35;letter-spacing:-.2px}
+.meta{color:var(--text-3);font-size:12px}
+.price{font-size:17px;font-weight:650;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.price .qty{font-size:11.5px;color:var(--text-3);font-weight:400;margin-left:6px}
+.star{color:var(--star);letter-spacing:1px;font-size:13px}
+.review{font-size:12.5px;color:var(--text-2);background:var(--line-soft);border-radius:8px;padding:7px 9px;white-space:pre-wrap}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:11px;color:var(--text-2);background:var(--chip);border-radius:6px;padding:2px 7px}
+.tag.re{background:#eafbf1;color:#137a45}
+.tag.no{background:#fdeeee;color:#b4232a}
+.tag.mb{background:#fff5e6;color:#a15c07}
+.foot{margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;align-items:center;color:var(--text-3);font-size:11.5px;border-top:1px solid var(--line-soft)}
+
+/* 配料 & 营养 */
+details.extra{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+details.extra summary{cursor:pointer;font-size:12px;color:var(--accent);list-style:none;user-select:none;outline:none}
+details.extra summary::-webkit-details-marker{display:none}
+details.extra summary::before{content:"▸ ";display:inline-block}
+details.extra[open] summary::before{content:"▾ "}
+.nutri{width:100%;border-collapse:collapse;font-size:11.5px;margin:7px 0 8px}
+.nutri th,.nutri td{padding:3px 6px;border-bottom:1px solid var(--line-soft);text-align:right;font-variant-numeric:tabular-nums}
+.nutri th:first-child,.nutri td:first-child{text-align:left}
+.nutri th{color:var(--text-3);font-weight:500;background:#fafbfc}
+.nutri td.hi{color:#b4232a;font-weight:600}
+.nutri td.mid{color:#a15c07;font-weight:500}
+.ing{font-size:12px;color:var(--text-2);background:#fbfcfd;border:1px solid var(--line-soft);border-radius:8px;padding:7px 9px;line-height:1.6}
+.note{font-size:12px;color:var(--text-2);margin-top:7px;white-space:pre-wrap;line-height:1.65;background:#f7f9fc;border-left:2px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 10px}
+
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{color:var(--text-3);font-weight:500;font-size:12px;background:#fafbfc;position:sticky;top:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.trow:hover{background:#fafbfd}
+
+/* 空态 / 灯箱 */
+.empty{text-align:center;color:var(--text-3);padding:60px 0}
+.lb{position:fixed;inset:0;background:rgba(12,16,22,.9);display:none;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:14px}
+.lb.on{display:flex}
+.lb img{max-width:88vw;max-height:78vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.lb .nav{display:flex;gap:10px;align-items:center;color:#fff}
+.lb .nav button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+.lb .nav button:hover{background:rgba(255,255,255,.26)}
+.lb .cap{color:#c8ced8;font-size:12.5px;max-width:80vw;text-align:center}
+
+@media(max-width:760px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .charts{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>我的购物记录库</h1>
+    <div class="sub">记录买过的食物、衣服、鞋……价格 · 图片 · 评价，随时可查 ｜ 数据更新于 __GENERATED_AT__</div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="panel">
+    <div class="filters">
+      <input type="search" id="q" placeholder="搜名称 / 品牌 / 评价 / 标签…">
+      <select id="range">
+        <option value="all">全部时间</option>
+        <option value="30">近 30 天</option>
+        <option value="90">近 90 天</option>
+        <option value="365">近一年</option>
+      </select>
+      <select id="sort">
+        <option value="date">按时间（新→旧）</option>
+        <option value="dateAsc">按时间（旧→新）</option>
+        <option value="price">按价格（高→低）</option>
+        <option value="priceAsc">按价格（低→高）</option>
+        <option value="rating">按评分（高→低）</option>
+      </select>
+      <select id="repurchase">
+        <option value="">回购：全部</option>
+        <option value="yes">会回购</option>
+        <option value="maybe">看情况</option>
+        <option value="no">不回购</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn" id="viewBtn">切换表格视图</button>
+      <button class="btn" id="csvBtn">导出当前结果 CSV</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="charts">
+    <div class="panel"><h2>分类支出占比</h2><div class="bars" id="catBars"></div></div>
+    <div class="panel"><h2>月度支出趋势</h2><div class="month-chart" id="monthChart"></div></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div class="lb" id="lb">
+  <img id="lbImg" src="" alt="">
+  <div class="nav">
+    <button id="lbPrev">← 上一张</button>
+    <span id="lbIdx"></span>
+    <button id="lbNext">下一张 →</button>
+    <button id="lbClose">关闭 ✕</button>
+  </div>
+  <div class="cap" id="lbCap"></div>
+</div>
+
+<script>
+const ITEMS = /*__DATA__*/null;
+
+const CAT_COLOR = {
+  "食物":"#e5484d","衣服":"#2f6bff","鞋":"#7c5cff","包配":"#c2569b","美妆护肤":"#e8935a",
+  "数码家电":"#0f9b8e","家居日用":"#5b8def","母婴":"#e06ba8","运动户外":"#3aa76d",
+  "图书文具":"#8a7af0","药品保健":"#4fa3d1","餐饮":"#f0a524","宠物":"#9a7b4f","其他":"#8b95a5"
+};
+const CAT_ICON = {"食物":"🍱","衣服":"👕","鞋":"👟","包配":"👜","美妆护肤":"💄","数码家电":"💻",
+  "家居日用":"🏠","母婴":"🍼","运动户外":"🏃","图书文具":"📚","药品保健":"💊","餐饮":"🍜","宠物":"🐾","其他":"📦"};
+
+const state = {q:"", cat:"", range:"all", sort:"date", repurchase:"", view:"card"};
+const items = (ITEMS||[]).map(r=>({...r, images: r.images||[], tags: r.tags||[]}));
+
+const money = v => v==null ? "-" : "¥" + Number(v).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const starStr = n => n ? "★".repeat(n) + "☆".repeat(5-n) : "";
+
+/* 营养成分：NRV 基准（GB 28050） */
+const NUTRI_LABEL = {energy_kj:"能量",protein_g:"蛋白质",fat_g:"脂肪",trans_fat_g:"反式脂肪酸",
+  carbs_g:"碳水化合物",sugar_g:"糖",fiber_g:"膳食纤维",sodium_mg:"钠",calcium_mg:"钙"};
+const NUTRI_UNIT = {energy_kj:"千焦",protein_g:"克",fat_g:"克",trans_fat_g:"克",
+  carbs_g:"克",sugar_g:"克",fiber_g:"克",sodium_mg:"毫克",calcium_mg:"毫克"};
+const NRV = {energy_kj:8400,protein_g:60,fat_g:60,carbs_g:300,fiber_g:25,sodium_mg:2000,calcium_mg:800};
+const NUTRI_ORDER = ["energy_kj","protein_g","fat_g","trans_fat_g","carbs_g","sugar_g","fiber_g","sodium_mg","calcium_mg"];
+
+function nutriTable(n){
+  if(!n) return "";
+  const keys = NUTRI_ORDER.filter(k => n[k]!=null);
+  if(!keys.length) return "";
+  const body = keys.map(k=>{
+    const v = n[k];
+    const pct = NRV[k]!=null ? v/NRV[k]*100 : null;
+    const cls = pct==null ? "" : (pct>=30 ? "hi" : pct>=15 ? "mid" : "");
+    return `<tr><td>${NUTRI_LABEL[k]||k}</td><td>${v} ${NUTRI_UNIT[k]||""}</td>
+      <td class="${cls}">${pct==null?"—":Math.round(pct)+"%"}</td></tr>`;
+  }).join("");
+  return `<table class="nutri"><thead><tr><th>每 100g</th><th>含量</th><th>NRV%</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function extraHTML(it){
+  const extra=[];
+  if(it.unit_price) extra.push(`单价 ${money(it.unit_price)}`);
+  if(it.shelf_life) extra.push(`保质期 ${esc(it.shelf_life)}`);
+  if(it.produced_date) extra.push(`生产 ${esc(it.produced_date)}`);
+  if(it.expiry_date) extra.push(`到期 ${esc(it.expiry_date)}`);
+  if(it.eating_method) extra.push(`食用 ${esc(it.eating_method)}`);
+  if(it.image_desc) extra.push(`图片 ${esc(it.image_desc)}`);
+  if(it.manufacturer) extra.push(`厂商 ${esc(it.manufacturer)}${it.manufacturer_address?" · "+esc(it.manufacturer_address):""}`);
+  if(it.manufacturer_phone) extra.push(`电话 ${esc(it.manufacturer_phone)}`);
+  if(it.license) extra.push(`许可证 ${esc(it.license)}`);
+  if(it.allergens) extra.push(`过敏原 ${esc(it.allergens)}`);
+  if(it.tips) extra.push(`提示 ${esc(it.tips)}`);
+  const kv = extra.length?`<div class="note">${extra.join(" · ")}</div>`:"";
+  if(!it.ingredients && !it.nutrition && !it.nutrition_analysis) return kv;
+  return kv + `<details class="extra"><summary>配料 & 营养成分</summary>
+    ${nutriTable(it.nutrition)}
+    ${it.ingredients?`<div class="ing"><b>配料</b>：${esc(it.ingredients)}</div>`:""}
+    ${it.nutrition_analysis?`<div class="note">${esc(it.nutrition_analysis)}</div>`:""}
+  </details>`;
+}
+
+function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);}
+
+function filtered(){
+  let out = items.filter(it=>{
+    if(state.cat && (it.category||"其他")!==state.cat) return false;
+    if(state.repurchase && (it.repurchase||"")!==state.repurchase) return false;
+    if(state.range!=="all" && it.purchase_date < daysAgo(+state.range)) return false;
+    if(state.q){
+      const q=state.q.toLowerCase();
+      const hay=[it.name,it.brand,it.review,it.category,it.channel,it.place,(it.tags||[]).join(","),(it.subcategory||"")]
+        .filter(Boolean).join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const s=state.sort;
+  out.sort((a,b)=> s==="date" ? (b.purchase_date||"").localeCompare(a.purchase_date||"")
+    : s==="dateAsc" ? (a.purchase_date||"").localeCompare(b.purchase_date||"")
+    : s==="price" ? (b.price||0)-(a.price||0)
+    : s==="priceAsc" ? (a.price||0)-(b.price||0)
+    : (b.rating||0)-(a.rating||0));
+  return out;
+}
+
+function renderKpis(list){
+  const total=list.reduce((s,i)=>s+(i.price||0),0);
+  const rated=list.filter(i=>i.rating);
+  const avg=rated.length? (rated.reduce((s,i)=>s+i.rating,0)/rated.length).toFixed(1):"—";
+  const now=new Date().toISOString().slice(0,7);
+  const month=list.filter(i=>(i.purchase_date||"").startsWith(now)).reduce((s,i)=>s+(i.price||0),0);
+  const cats=new Set(list.map(i=>i.category||"其他")).size;
+  document.getElementById("kpis").innerHTML=[
+    ["筛选出账总额", money(total), ""],
+    ["件数", list.length, `共 ${cats} 个分类`],
+    ["平均评分", avg, rated.length? `${rated.length} 件已评分` : "暂无评分"],
+    ["本月支出", money(month), now]
+  ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s?` <small>${s}</small>`:""}</div></div>`).join("");
+}
+
+function renderChips(list){
+  const counts={}; list.forEach(i=>{const c=i.category||"其他";counts[c]=(counts[c]||0)+1;});
+  const cats=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const all=`<div class="chip ${state.cat===""?"on":""}" data-cat="">全部 ${list.length}</div>`;
+  document.getElementById("chips").innerHTML = all + cats.map(c=>
+    `<div class="chip ${state.cat===c?"on":""}" data-cat="${esc(c)}">${CAT_ICON[c]||"📦"} ${esc(c)} ${counts[c]}</div>`).join("");
+  document.querySelectorAll(".chip").forEach(el=>el.onclick=()=>{state.cat=el.dataset.cat;render();});
+}
+
+function renderCharts(list){
+  const total=list.reduce((s,i)=>s+(i.price||0),0);
+  const byCat={}; list.forEach(i=>{const c=i.category||"其他";byCat[c]=(byCat[c]||0)+(i.price||0);});
+  const rows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("catBars").innerHTML = rows.length? rows.map(([c,v])=>`
+    <div class="bar-row">
+      <span>${CAT_ICON[c]||"📦"} ${esc(c)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${total?v/total*100:0}%;background:${CAT_COLOR[c]||"#8b95a5"}"></div></div>
+      <span class="bar-val">${money(v)} · ${total?Math.round(v/total*100):0}%</span>
+    </div>`).join("") : `<div class="empty">暂无数据</div>`;
+
+  const byM={}; list.forEach(i=>{const m=(i.purchase_date||"").slice(0,7); if(m) byM[m]=(byM[m]||0)+(i.price||0);});
+  const ms=Object.keys(byM).sort().slice(-12);
+  const mx=Math.max(1,...ms.map(m=>byM[m]));
+  document.getElementById("monthChart").innerHTML = ms.length? ms.map(m=>`
+    <div class="month-col" title="${m}：${money(byM[m])}">
+      <div class="amt">${Math.round(byM[m])}</div>
+      <div class="col" style="height:${byM[m]/mx*100}%"></div>
+      <div class="lbl">${m.slice(2)}</div>
+    </div>`).join("") : `<div class="empty">暂无数据</div>`;
+}
+
+function cardHTML(it){
+  const imgs=it.images||[];
+  const thumb = imgs.length
+    ? `<img src="${esc(imgs[0])}" alt="" loading="lazy" onclick="openLb(${it.id},0)">
+       ${imgs.length>1?`<span class="n-img">${imgs.length} 张</span>`:""}`
+    : `<span class="ph">${CAT_ICON[it.category]||"📦"}</span>`;
+  const rp = it.repurchase==="yes"?`<span class="tag re">会回购</span>`
+    : it.repurchase==="no"?`<span class="tag no">不回购</span>`
+    : it.repurchase==="maybe"?`<span class="tag mb">看情况</span>`:"";
+  const tags=(it.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  return `<div class="card">
+    <div class="thumb"${imgs.length?` onclick="openLb(${it.id},0)"`:""}>${thumb}</div>
+    <div class="body">
+      <div class="nm">${esc(it.name)}</div>
+      <div class="meta">${esc(it.category||"其他")}${it.subcategory?" · "+esc(it.subcategory):""}${it.brand?" · "+esc(it.brand):""}</div>
+      <div class="price">${money(it.price)}${(it.quantity&&it.quantity!==1)?`<span class="qty">×${it.quantity}${it.unit_price?"（单价 "+money(it.unit_price)+"）":""}</span>`:""}</div>
+      ${it.rating?`<div class="star">${starStr(it.rating)}</div>`:""}
+      ${it.review?`<div class="review">${esc(it.review)}</div>`:""}
+      ${(tags||rp)?`<div class="tags">${rp}${tags}</div>`:""}
+      ${extraHTML(it)}
+      <div class="foot"><span>${esc(it.purchase_date||"")}</span><span>${it.channel?esc(it.channel):""}${it.place?" · "+esc(it.place):""}</span></div>
+    </div></div>`;
+}
+
+function renderTable(list){
+  if(!list.length) return `<div class="empty">没有符合条件的记录</div>`;
+  return `<div class="panel" style="overflow:auto"><table>
+    <thead><tr><th>图片</th><th>日期</th><th>分类</th><th>名称</th><th>品牌/渠道</th><th class="num">价格</th><th>评分</th><th>评价</th><th>回购</th></tr></thead>
+    <tbody>${list.map(it=>`<tr class="trow">
+      <td>${it.images&&it.images.length?`<img src="${esc(it.images[0])}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;cursor:zoom-in" onclick="openLb(${it.id},0)">`:"—"}</td>
+      <td>${esc(it.purchase_date||"")}</td>
+      <td>${esc(it.category||"其他")}</td>
+      <td><b>${esc(it.name)}</b></td>
+      <td>${esc([it.brand,it.channel].filter(Boolean).join(" · "))}</td>
+      <td class="num">${money(it.price)}</td>
+      <td class="star">${starStr(it.rating)}</td>
+      <td>${esc(it.review||"")}</td>
+      <td>${it.repurchase==="yes"?"会回购":it.repurchase==="no"?"不回购":it.repurchase==="maybe"?"看情况":""}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+function render(){
+  const list=filtered();
+  renderKpis(list); renderChips(list); renderCharts(list);
+  const c=document.getElementById("content");
+  if(!list.length){ c.innerHTML=`<div class="empty">没有符合条件的记录 🗂️</div>`; return; }
+  c.innerHTML = state.view==="card"
+    ? `<div class="grid">${list.map(cardHTML).join("")}</div>`
+    : renderTable(list);
+}
+
+/* 灯箱 */
+let lbList=[], lbI=0, lbItem=null;
+function openLb(id,i){
+  lbItem=items.find(x=>x.id===id); lbList=lbItem.images||[]; lbI=i||0;
+  if(!lbList.length) return;
+  document.getElementById("lb").classList.add("on"); showLb();
+}
+function showLb(){
+  document.getElementById("lbImg").src=lbList[lbI];
+  document.getElementById("lbIdx").textContent=`${lbI+1} / ${lbList.length}`;
+  document.getElementById("lbCap").textContent=`${lbItem.name} · ${money(lbItem.price)} · ${lbItem.purchase_date}`;
+}
+document.getElementById("lbNext").onclick=()=>{lbI=(lbI+1)%lbList.length;showLb();};
+document.getElementById("lbPrev").onclick=()=>{lbI=(lbI-1+lbList.length)%lbList.length;showLb();};
+document.getElementById("lbClose").onclick=()=>document.getElementById("lb").classList.remove("on");
+document.getElementById("lb").onclick=e=>{if(e.target.id==="lb")document.getElementById("lb").classList.remove("on");};
+document.addEventListener("keydown",e=>{
+  if(!document.getElementById("lb").classList.contains("on"))return;
+  if(e.key==="Escape")document.getElementById("lb").classList.remove("on");
+  if(e.key==="ArrowRight")document.getElementById("lbNext").click();
+  if(e.key==="ArrowLeft")document.getElementById("lbPrev").click();
+});
+
+/* 交互 */
+document.getElementById("q").oninput=e=>{state.q=e.target.value.trim();render();};
+document.getElementById("range").onchange=e=>{state.range=e.target.value;render();};
+document.getElementById("sort").onchange=e=>{state.sort=e.target.value;render();};
+document.getElementById("repurchase").onchange=e=>{state.repurchase=e.target.value;render();};
+document.getElementById("viewBtn").onclick=()=>{
+  state.view = state.view==="card"?"table":"card";
+  document.getElementById("viewBtn").textContent = state.view==="card"?"切换表格视图":"切换卡片视图";
+  render();
+};
+document.getElementById("csvBtn").onclick=()=>{
+  const list=filtered();
+  const head=["日期","分类","名称","品牌","价格","数量","渠道","评分","评价","标签","回购"];
+  const esc2=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
+  const body=list.map(i=>[i.purchase_date,i.category,i.name,i.brand,i.price,i.quantity,i.channel,i.rating,i.review,(i.tags||[]).join("/"),i.repurchase].map(esc2).join(","));
+  const csv="\uFEFF"+head.join(",")+"\n"+body.join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="购物记录_筛选结果.csv"; a.click();
+};
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+# ---- 本地数据与隐私（绝不进入开源仓库） ----
+*.db
+*.db-*
+*.db.bak*
+data.js
+site/data.js
+site/images/
+images/
+# 例外：docs/images 是文档配图（架构图 / 流程图），要随仓库分发，README 里引用
+!docs/images/
+.htpasswd
+htpasswd
+*.log
+logs/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.DS_Store
+
+# ---- 生成物：由数据/模板渲染而来，含真实业务数据 ----
+# dashboard.html 由 `shop.py report` 从 scripts/template.html 填充数据库内容生成，
+# 历史上曾因未忽略而把真实消费记录提交进公开仓库（O-1）。模板在 scripts/template.html。
+dashboard.html
+site/dashboard.html
+*.html.bak
+report.html
+snapshot.html
+
+# 导出文件（含真实记录）
+exports/
+*.csv
+*.xlsx
+
+# 本地数据目录（整体忽略，防止其中任何文件被追踪）
+data/
+site/data/
+
+# 本地环境/备份/临时
+*.bak
+*.bak-*
+nohup.out
+*.swp
+*~
+.DS_Store
+
+# site/images 软链接（指向本地 images/，不提交链接本身）
+site/images
+
+# 本地数据库配置（含专属用户密码，严禁入库）
+config.local.json
+config.*.json
+
+# 任何形式的凭据文件
+*.env
+.env
+.env.*
+secrets*.json
+credentials*.json
+*.pem
+*.key
+
+# 本地 OCR 编译产物（由 swiftc 现场生成）
+bin/ocr_vision
+ocr_vision
+*.img
+
+# agent 协作空间：公约/流水/踩坑库只在本地分发，不进公开仓库（2026-10-25 定）
+docs/coordination/
+.mentor/
+.workbuddy/
+
+# 含泄露对象 SHA 的 Support 材料，不能进公开仓库
+docs/coordination/GITHUB-SUPPORT-REQUEST.md

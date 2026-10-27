@@ -1,0 +1,133 @@
+# ShoppingLog 0.1 nginx 配置示例（多用户 auth_request 鉴权）
+# 用途：反向代理 8088 端口，/api/* 转发到本地 API 服务 8787，
+#       静态资源（html/js/图片）由 auth_request 统一鉴权，未登录 302 到 /login.html
+# 使用方法：修改 <SITE_ROOT> / <LOG_DIR> 后放入 /opt/homebrew/etc/nginx/servers/ 或 sites-enabled/
+
+map $cookie_shopping_token $shopping_auth_legacy {
+    default 0;
+}
+
+server {
+    listen       8088;
+    server_name  localhost shopping.local;
+
+    # 重定向输出相对路径，避免公网域名被拼上监听端口
+    absolute_redirect off;
+
+    root   <SITE_ROOT>/site;
+    index  index.html;
+
+    # gzip 压缩（no-cache 不缓存，但传输照常压缩）
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1k;
+    gzip_comp_level 5;
+    gzip_types text/plain text/css application/javascript application/json application/xml image/svg+xml;
+
+    # ---- 免鉴权端点 ----
+    location = /api/login {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    location = /api/register {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    # 公开广场接口：免登录（只返回已公开、且已剔除购买记录的字段）
+    location = /api/public {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    # 版本号：免登录（只返回版本号，供网页右下角徽标判断线上跑到哪了）
+    location = /api/version {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    # MCP 端点：自带 Bearer Token 鉴权，**不走 cookie auth_request**。
+    # 若走 auth_request，无效 Token 会被 302 到 /login.html，MCP 客户端收到的是 HTML 而不是 JSON-RPC 错误；
+    # 显式放行后由后端自己判 Token（无效 → 401 JSON，有效 → 正常处理）。
+    # 只对外转发 8088 时，MCP 必须挂在 8088 上（/api/mcp）才能通过域名访问。
+    location = /api/mcp {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+    # 公开广场图片：免登录，但服务端校验该图确实挂在某条公开记录上（不在公开记录里的图一律 403）。
+    # 不放开这一段，免登录页里的 <img src="/images/…"> 会被 302 成登录页，图片全裂。
+    location = /api/public-image {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    location = /login.html {
+        root <SITE_ROOT>/site;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+    location = /register.html {
+        root <SITE_ROOT>/site;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+    # 公开广场页面：免登录
+    location = /public.html {
+        root <SITE_ROOT>/site;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+    # 展示层公共库：index.html 与 public.html 共用（esc/半星星级/营养表/健康分）。
+    # 必须放行，否则免登录的公开广场加载不到 shared.js，整页脚本直接报错白屏。
+    location = /shared.js {
+        root <SITE_ROOT>/site;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    # ---- 鉴权内部端点（不对外） ----
+    location = /api/auth-check {
+        internal;
+        proxy_pass http://127.0.0.1:8787/api/auth-check;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # ---- API（鉴权后反代到 API 服务） ----
+    location /api/ {
+        auth_request /api/auth-check;
+        error_page 401 =302 /login.html;
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    # ---- 静态图片（隐私数据，需要鉴权） ----
+    location ~* \.(png|jpe?g|gif|svg|webp|ico)$ {
+        auth_request /api/auth-check;
+        error_page 401 =302 /login.html;
+        expires 7d;
+        add_header Cache-Control "public";
+        access_log off;
+    }
+
+    # ---- JS 等脚本不缓存（需要鉴权） ----
+    location ~* \.js$ {
+        auth_request /api/auth-check;
+        error_page 401 =302 /login.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+        access_log off;
+    }
+
+    # ---- 其余页面（含 index.html）：需要鉴权；html 不缓存 ----
+    location / {
+        auth_request /api/auth-check;
+        error_page 401 =302 /login.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+}

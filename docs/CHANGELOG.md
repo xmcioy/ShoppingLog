@@ -1,0 +1,98 @@
+# 版本更新记录
+
+版本号唯一来源：仓库根 `VERSION` 文件。每次提交递增第三位（patch）；第二位 / 第一位只在明确要求时才升。
+递增命令：`bash scripts/bump_version.sh`（`patch` 默认 / `minor` / `major`）。
+
+---
+
+## 0.6.2（2026-10-24）
+
+**健康评分收敛到后端 + 按健康档次筛选（A/B/C/D）**
+
+- **健康评分改为服务端唯一权威**：`/api/add`、`/api/update`（改了营养或配料）都会调用
+  `health_score.score_food` 并把 `health_score / health_level / health_reason` 写进库。
+  以前只有走 OCR 的 `/api/upload` 才算分，MCP / 手工录入的记录三个字段全是 NULL。
+  显式传 `health_score` 时以调用方为准（人工复核优先）。没有营养也没有配料时不硬凑分（非食品）。
+- **新增 `health_grade`（A/B/C/D）**：后端按 `health_score` 统一换算（阈值 A≥80 / B≥60 / C≥40 / D<40），
+  `site/shared.js` 的 `healthGrade()` 用同一套阈值，并有测试逐档比对防止两处漂移。
+  档位名称同步为「优秀 / 良好 / 一般 / 需注意」。
+- **按档次筛选**：
+  - 个人页（`index.html`）工具栏新增「健康」下拉（全部 / A / B / C / D / 未评分），本地即时筛选；
+  - 公开广场（`public.html`）新增 A/B/C/D/未评分 chips，走后端 `GET /api/public?grade=`；
+  - MCP `list_items` 新增 `grade` 参数（A/B/C/D/none），返回值带 `health_grade`。
+- **老数据补分**：新增 `scripts/recalc_health.py`（默认只补算未评分的，`--all` 全量重算，`--dry-run` 预演）。
+- **修**：`/api/add`、`/api/update` 直接传 dict/list 形式的 `nutrition / flavors / purchase_history`
+  会让 SQLite/MySQL 绑定失败、连接被直接断开（表现为 RemoteDisconnected）。新增 `jsonify_fields()` 统一序列化。
+- 测试：新增 5 个用例（新增自动算分、无数据不给分、编辑重算、公开广场档次筛选、前后端阈值一致）。
+
+**购买记录拆表 + 传图录入改造**
+
+- **购买记录独立成表 `purchases`**：商品档案 `items` 与购买记录 1:N，一次购买一行。
+  同款买 N 次不再复制 N 份商品信息，价格历史、复购次数、均价、总花费可直接算。
+  - 旧库自动回填：每条已有 `items` 视为「买过一次」，生成首条 `purchases`（幂等，可重复执行）。
+  - `items` 上的 `price / purchase_date / channel` 等保留为「最近一次购买」的冗余缓存，随写入同步。
+  - `GET /api/items` 额外返回 `purchases / purchase_count / total_spent / avg_price / min_price / max_price / first_purchase_date / last_purchase_date`。
+  - `POST /api/add` 传 `item_id` 即**复购**：只新增购买记录，未传的购买字段沿用上一次。
+  - `POST /api/update` 改购买字段时同步最近一次购买（或 `purchase_id` 指定的那次）；删除商品级联清理购买记录。
+  - `POST /api/purchase/delete` 删掉误记的**单次购买**，商品档案保留，缓存刷新为剩余里最新的那条；
+    卡片购买记录每行带 ✕ 按钮。
+  - MCP `add_item` 新增 `item_id` 参数，复购同样只新增购买记录。
+- **传图录入改成真正两步**：选图（支持多选 / 拖拽）→ 图片立即归档并**自动本地识别**，
+  识别完才展开第二步表单（识别到的字段标绿），不再需要手动点「识别并填充」。
+- **复购入口**：新增弹窗里可搜索已有商品「再买一次」；卡片操作条新增 🛒 按钮，
+  选中后只填本次购买信息（价格 / 日期 / 数量 / 渠道），商品档案不重复创建。
+- 卡片「购买记录」折叠块改为读取 `purchases`，显示次数 / 合计 / 均价与每次购买明细。
+
+## 0.6.1（2026-10-24）
+
+- 前端展示层抽出 `site/shared.js`（esc / money / 半星 starStr / healthScore / healthGrade / nutriTable 等），
+  个人页与公开广场共用一份实现，修掉公开广场 3.5 星显示成 4 星、营养表单位不一致的问题。
+- 同步补文档与测试。
+
+## 0.5.3（2026-10-24）
+
+- 版本号单一来源（`VERSION` + `scripts/version.py` + `bump_version.sh` + pre-commit 钩子）。
+- 网页右下角版本徽标；新增免鉴权 `GET /api/version`。
+- nginx 8088：`/api/mcp` 单独放行并透传 `Authorization`（无效 Token 返回 401 JSON，不再是登录页 302）；
+  `/api/version` 免鉴权；代理超时 300s。
+- `deploy.sh` 校验版本一致性 + 8088 前端 / MCP 复核。
+- 修复 macOS bash 3.2「`$VAR` 紧邻中文全角括号」被当成变量名一部分的隐患。
+
+## 0.5.2（2026-10-24）
+
+- 公开广场改为小红书式大图卡片（商品图、成分、营养、食用方式公开；购买记录仍不公开）。
+- 卡片按钮不重叠（操作条 flex）、卡片主图放大到 4:3。
+- 新增 `GET /api/public-image`：免登录图片出口，逐张校验图片确属公开记录。
+
+## 0.5.1（2026-10-24）
+
+- MCP 内置进服务进程（`POST /api/mcp`），不再单独起进程；`mcp_server.py` 退化为 stdio 管道。
+
+## 0.5.0（2026-10-24）
+
+- 新增 MCP 服务与工具集（9 个工具）；`shopping-log` 技能改为纯 MCP 调用，不再直连数据库。
+
+## 0.4.x（2026-10-24）
+
+- 用户生命周期：停用 → 回收站 → 恢复 → 永久删除；管理员自保护。
+- 公开广场跨用户聚合；图片归档与目录穿越防护。
+
+## 0.3.0（2026-10-24）
+
+- 纯本地多图 OCR（macOS Vision）自动填充字段且全字段可编辑。
+- 本地规则食品健康评分（`health_score / health_level / health_reason` 随记录保存）。
+- 删除全部模型设置，全程零模型 API。
+
+## 0.2.0（2026-10-24）
+
+- 删除 admin 内置用户；统一数据库层 `scripts/db.py`（SQLite / MySQL 双引擎，方言自动转译）。
+- 本地配置 `config.local.json` + 模板 `config.example.json`；新增 `docs/MYSQL.md`。
+
+## 0.1.0（2026-10-24）
+
+- 多用户基础（注册 / 登录 / Token / 数据隔离）、网页编辑、图文上传、双通道录入。
+- 设计文档 / 建表语句 / skill / 中英文 README，推送 Gitea 私有 + GitHub 公开。
+
+---
+
+更细的设计取舍见 [DESIGN.md](DESIGN.md)，接口细节见 [api.md](api.md)。

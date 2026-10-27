@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>购物记录 · ShoppingLog</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+<style>
+:root{
+  --bg:#f5f6fa; --panel:#ffffff; --panel2:#f0f2f8;
+  --text:#1d2433; --muted:#6b7488; --line:#e6e9f2;
+  --accent:#5b6cff; --accent2:#8a5cff; --good:#22a06b; --bad:#e5484d; --warn:#e8935a;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.08);
+  --radius:14px;
+}
+[data-theme="dark"]{
+  --bg:#0f1219; --panel:#171b26; --panel2:#1e2330;
+  --text:#e8ecf5; --muted:#9aa3b8; --line:#2a3040;
+  --accent:#7b8cff; --accent2:#a88cff; --good:#34c98a; --bad:#ff6b6b; --warn:#f0a05a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;transition:background .2s,color .2s}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px 64px}
+
+/* Header */
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#5b6cff 0%,#8a5cff 55%,#c2569b 100%);color:#fff;padding:34px 18px 44px;border-radius:0 0 28px 28px}
+.hero .wrap{position:relative;z-index:1;padding-bottom:0}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 240px at 85% 20%,rgba(255,255,255,.18),transparent 60%)}
+.hero h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+.hero p{opacity:.92;margin-top:4px;font-size:14px}
+.hero-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;transition:.15s;background:rgba(255,255,255,.18);color:#fff}
+.btn:hover{background:rgba(255,255,255,.3)}
+a.btn{text-decoration:none}
+.btn.solid{background:#fff;color:#5b6cff}
+.btn.solid:hover{background:#f2f4ff}
+
+/* Toolbar */
+.toolbar{position:sticky;top:10px;z-index:20;margin-top:-18px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toolbar input[type=search]{flex:1 1 220px;min-width:180px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:10px;padding:9px 12px;font-size:13px;outline:none}
+.toolbar input[type=search]:focus{border-color:var(--accent)}
+.toolbar select{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:10px;padding:8px 10px;font-size:13px;outline:none;cursor:pointer}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.kpi .k{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px}
+.kpi .v small{font-size:12px;color:var(--muted);font-weight:500}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;color:var(--muted);transition:.15s;user-select:none}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.panel h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.bar-row{display:grid;grid-template-columns:120px 1fr 92px;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+.bar-track{background:var(--panel2);border-radius:999px;height:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;transition:width .4s}
+.bar-val{text-align:right;color:var(--muted);font-size:12px;white-space:nowrap}
+.month-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:6px}
+.month-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;min-width:0}
+.month-col .amt{font-size:10px;color:var(--muted);white-space:nowrap}
+.month-col .col{width:100%;max-width:34px;background:linear-gradient(180deg,var(--accent2),var(--accent));border-radius:6px 6px 2px 2px;transition:height .4s;min-height:3px}
+.month-col .lbl{font-size:10px;color:var(--muted)}
+.empty{color:var(--muted);font-size:13px;padding:14px;text-align:center}
+
+/* Month group & cards */
+.month-gap{margin-top:20px;padding-bottom:6px;display:flex;align-items:baseline;gap:10px}
+.month-gap h2{font-size:17px;font-weight:800}
+.month-gap span{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;cursor:pointer}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,24,40,.14)}
+/* 卡片主图：占满卡片宽度，4:3 大图（0.5.2 之前被下面 .thumb-strip 的 74px 规则
+   意外覆盖成小方块，这里统一用 .card .thumb 提高特指度并显式给出尺寸） */
+.card .thumb{position:relative;width:100%;aspect-ratio:4/3;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card .thumb .ph{font-size:46px;opacity:.4}
+.card .thumb .n-img{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;border-radius:8px;padding:2px 8px}
+.card .thumb .src-tag{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:8px;padding:2px 8px}
+/* 删除 / 编辑放进同一条操作条里：之前两个按钮各自绝对定位（right:8 / right:38），
+   在窄卡片上会互相压住，现在用 flex + gap 排布，永远不会重叠 */
+.card .thumb .acts{position:absolute;right:8px;top:8px;display:flex;gap:6px;z-index:2}
+.card .thumb .acts button{
+  width:28px;height:28px;flex:0 0 28px;padding:0;line-height:1;border:none;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center
+}
+.card .thumb .acts .del:hover{background:#e5484d}
+.card .thumb .acts .edit:hover{background:var(--accent)}
+.card .body{padding:14px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card .nm{font-size:15px;font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.health-pill{flex-shrink:0;font-size:11px;font-weight:800;border-radius:8px;padding:3px 8px;color:#fff}
+.card .meta{font-size:12px;color:var(--muted)}
+.card .std{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.card .std b{color:var(--accent);font-weight:600;letter-spacing:.3px}
+.card .flavor{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.card .flavor b{color:var(--accent2);font-weight:600;letter-spacing:.3px}
+.card .price{font-size:19px;font-weight:800;color:var(--accent)}
+.card .price .qty{font-size:12px;color:var(--muted);font-weight:500}
+.star{color:#f5b301;font-size:13px;letter-spacing:1px}
+/* .stars 星级样式（含半星）由 shared.js 注入，此处不再重复定义 */
+.review{font-size:13px;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.tag{font-size:11px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 9px}
+.tag.re{background:rgba(34,160,107,.12);border-color:rgba(34,160,107,.25);color:var(--good)}
+.tag.no{background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.25);color:var(--bad)}
+.tag.mb{background:rgba(232,147,90,.12);border-color:rgba(232,147,90,.25);color:var(--warn)}
+.nutri-sum{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px}
+.nutri-sum b{color:var(--good)}
+.nutri-sum b.warn{color:var(--warn)}
+.card .foot{margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);border-top:1px dashed var(--line)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--muted);font-size:12px;white-space:nowrap;position:sticky;top:0;background:var(--panel)}
+td.num{text-align:right;font-weight:700}
+td.star{color:#f5b301;white-space:nowrap}
+.trow:hover{background:var(--panel2)}
+.trow img{width:44px;height:44px;object-fit:cover;border-radius:8px;cursor:zoom-in}
+
+/* nutrition details */
+details.extra{margin-top:6px;font-size:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:0 10px}
+details.extra summary{cursor:pointer;color:var(--accent);font-weight:600;padding:8px 0;list-style:none;user-select:none}
+details.extra summary::-webkit-details-marker{display:none}
+details.extra[open] summary{border-bottom:1px dashed var(--line)}
+.blocks{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.blocks .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 16px;margin:8px 0 4px}
+.blocks .kv div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:3px 0;gap:8px}
+.blocks .kv b{font-weight:600}
+.blocks .kv span{color:var(--muted)}
+.blocks .ph-list{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+.blocks .ph-row{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;display:flex;flex-direction:column;gap:3px}
+.blocks .ph-row .ph-head{display:flex;justify-content:space-between;align-items:center}
+.blocks .ph-row .ph-head b{font-size:12px}
+.blocks .ph-row .ph-head .ph-qty{color:var(--muted)}
+.blocks .ph-row .ph-price{display:flex;flex-wrap:wrap;gap:4px 10px}
+.blocks .ph-row .ph-price span{color:var(--muted)}
+.blocks .ph-row .ph-src{color:var(--accent)}
+.blocks .ph-row .ph-exp{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px}
+.blocks .ph-row .ph-exp span{color:var(--accent);font-weight:600}
+.blocks .ph-row .pdel{border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:6px;font-size:11px;line-height:1;padding:3px 6px;cursor:pointer}
+.blocks .ph-row .pdel:hover{border-color:var(--danger,#e5484d);color:var(--danger,#e5484d)}
+table.nutri{width:100%;margin:8px 0;font-size:12px}
+table.nutri td,table.nutri th{padding:5px 8px}
+table.nutri td.hi{color:var(--bad);font-weight:700}
+table.nutri td.mid{color:var(--warn);font-weight:600}
+.ing{color:var(--muted);margin:6px 0}
+.note{background:var(--panel2);border-left:3px solid var(--accent);border-radius:6px;padding:8px 10px;color:var(--muted);line-height:1.6;white-space:pre-line}
+
+/* Lightbox */
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px}
+#lb.on{display:flex}
+#lb img{max-width:92vw;max-height:78vh;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#lb .cap{color:#fff;font-size:13px}
+#lb .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:0;color:#fff;font-size:26px;width:46px;height:46px;border-radius:50%;cursor:pointer}
+#lb .nav:hover{background:rgba(255,255,255,.25)}
+#lb .prev{left:18px}#lb .next{right:18px}
+#lb .close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.12);border:0;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer}
+
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:90;align-items:center;justify-content:center;padding:20px}
+#modal.on{display:flex}
+#itemModal,#settingsModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:95;align-items:center;justify-content:center;padding:20px}
+#itemModal.on,#settingsModal.on{display:flex}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:1/-1}
+.form-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.form-grid input,.form-grid select,.form-grid textarea{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;padding:9px 11px;font-size:13px;outline:none}
+.form-grid textarea{min-height:64px;resize:vertical}
+.file-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* 上传预览小图：类名改成 .mini，不再复用 .thumb，
+   免得和卡片主图 .card .thumb 的样式互相覆盖 */
+.thumb-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.mini{position:relative;width:74px;height:74px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--panel)}
+.mini img{width:100%;height:100%;object-fit:cover;display:block}
+.mini .del{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:11px;line-height:18px;text-align:center;cursor:pointer;padding:0}
+.mini .up{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;font-size:11px}
+.file-row .fname{color:var(--muted);font-size:12px}
+/* ---- 分步表单 ---- */
+.step-box{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:var(--panel2)}
+.step-hd{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:11px}
+.step-no{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;flex-shrink:0}
+.step-hint{margin-left:auto;font-size:11px;font-weight:400;color:var(--muted)}
+.req{color:var(--bad)}
+.src{font-style:normal;font-size:10px;color:var(--good);background:rgba(47,158,111,.12);border-radius:5px;padding:1px 5px;margin-left:4px;display:none}
+.src.on{display:inline-block}
+button.sm{padding:6px 12px;font-size:12px;border-radius:8px}
+/* ---- 传图录入（0.6.0）：大号拖放区 + 自动识别 ---- */
+.drop{border:2px dashed var(--line);border-radius:12px;background:var(--panel);padding:18px;text-align:center;cursor:pointer;transition:all .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--panel2)}
+.drop-ico{font-size:26px;line-height:1}
+.drop-txt{font-size:13px;font-weight:600;margin-top:6px}
+.drop-sub{font-size:11px;color:var(--muted);margin-top:3px}
+/* 已有商品复购选择 */
+.reuse-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:180px;overflow:auto}
+.reuse-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer;font-size:12px}
+.reuse-item:hover{border-color:var(--accent)}
+.reuse-item img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.reuse-item .rn{font-weight:600}
+.reuse-item .rm{color:var(--muted);font-size:11px}
+.reuse-item .rc{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.reuse-pick{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:9px;background:rgba(91,108,255,.1);font-size:12px}
+.reuse-pick b{color:var(--accent)}
+.reuse-pick button{margin-left:auto;border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px}
+.card .thumb .acts .rebuy:hover{background:var(--accent)}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.modal-foot button{border:0;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.modal-foot .primary{background:var(--accent);color:#fff}
+.modal-foot .ghost{background:var(--panel2);color:var(--muted)}
+.st-msg{min-height:20px;font-size:13px;margin-top:10px}
+.tok-label{font-size:12px;color:var(--muted);margin:2px 0 6px}
+.token-box{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;line-height:1.65;background:var(--panel2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 11px;word-break:break-all;user-select:all;color:var(--text)}
+.token-box.masked{letter-spacing:1px;color:var(--muted)}
+.st-sec{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:var(--panel2)}
+.st-sec h4{margin:0 0 10px;font-size:13px;font-weight:600}
+.st-hint{font-size:11px;color:var(--muted);margin:-4px 0 10px;line-height:1.5}
+.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn-row button{border:0;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-row .primary{background:var(--accent);color:#fff}
+.btn-row .ghost{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.modal-card.wide{width:min(560px,94vw)}
+.user-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.u-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12px}
+.u-row .un{font-weight:600}
+.u-row .um{color:var(--muted);font-size:11px}
+.u-row .acts{margin-left:auto;display:flex;gap:6px}
+.u-row .acts button{border:0;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.u-row .acts .danger{color:#e5484d;border-color:rgba(229,72,77,.4)}
+.badge{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--accent);color:#fff}
+.badge.off{background:#888}
+.badge.adm{background:#e8935a}
+.pub-pager .pg:hover:not(:disabled){border-color:var(--accent)}
+.pub-pager .pg.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pub-pager .pg:disabled{opacity:.4;cursor:not-allowed}
+.st-sec{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.st-sec h4{font-size:13px;margin-bottom:10px;color:var(--accent)}
+.st-sec .kv{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+.st-sec .kv b{color:var(--text)}
+.st-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-top:8px}
+.modal-card{background:var(--panel);border-radius:18px;max-width:640px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal-head{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;z-index:1}
+.modal-head h3{font-size:17px}
+.modal-head button{border:0;background:var(--panel2);color:var(--muted);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:16px}
+.modal-body{padding:16px 20px 22px;font-size:13px}
+.modal-body .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 16px;margin-bottom:12px}
+.modal-body .kv div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:4px 0}
+.modal-body .kv b{font-weight:600}
+.modal-body .kv span{color:var(--muted)}
+.modal-body h4{font-size:13px;margin:14px 0 6px;color:var(--accent)}
+.modal-body .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.modal-body .gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
+
+/* footer */
+.footer{text-align:center;color:var(--muted);font-size:12px;margin-top:40px}
+/* 右下角版本号徽标（用于确认线上部署到哪了） */
+.ver-badge{
+  position:fixed;right:14px;bottom:14px;z-index:80;
+  font-size:11px;line-height:1;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:6px 11px;box-shadow:var(--shadow);opacity:.82;
+  cursor:default;user-select:none;backdrop-filter:blur(6px);
+}
+.ver-badge:hover{opacity:1;color:var(--text)}
+@media(max-width:640px){
+  .hero h1{font-size:21px}
+  .toolbar{position:static}
+  .grid{grid-template-columns:1fr}
+  .bar-row{grid-template-columns:90px 1fr 80px}
+}
+/* 同产品多口味聚合 tab */
+.grp-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0;border-bottom:1px solid var(--line);background:var(--panel2)}
+.grp-tabs .gtab{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;transition:all .15s}
+.grp-tabs .gtab:hover{color:var(--text)}
+.grp-tabs .gtab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.grp-card{cursor:default}
+.grp-card .grp-panel{display:none}
+.grp-card .grp-panel.on{display:flex;flex-direction:column}
+.grp-card .grp-panel.on .thumb{aspect-ratio:4/3}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>🛍️ 购物记录 · ShoppingLog</h1>
+    <p>本地购物知识库展示面板 — 记录每一次购买的价格、图片、评价与营养分析</p>
+    <div class="hero-actions">
+      <button class="btn solid" id="addBtn">＋ 新增记录（可传图 / 复购）</button>
+      <a class="btn" id="publicBtn" href="/public.html" target="_blank" rel="noopener">🌐 公开广场</a>
+      <button class="btn solid" id="csvBtn">导出 CSV</button>
+      <button class="btn" id="settingsBtn">⚙️ 设置</button>
+      <button class="btn" id="themeBtn">🌙 深色模式</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="搜索名称 / 品牌 / 评价 / 标签…">
+    <select id="range">
+      <option value="all">全部时间</option><option value="7">近 7 天</option>
+      <option value="30">近 30 天</option><option value="90">近 90 天</option>
+    </select>
+    <select id="sort">
+      <option value="date">按日期 ↓</option><option value="dateAsc">按日期 ↑</option>
+      <option value="price">按价格 ↓</option><option value="priceAsc">按价格 ↑</option>
+      <option value="rating">按评分 ↓</option>
+    </select>
+    <select id="shop">
+      <option value="">店铺：全部</option>
+    </select>
+    <select id="repurchase">
+      <option value="">回购：全部</option><option value="yes">会回购</option>
+      <option value="maybe">看情况</option><option value="no">不回购</option>
+    </select>
+    <select id="ratingFilter">
+      <option value="">星级：全部</option><option value="1">1星及以上</option>
+      <option value="2">2星及以上</option><option value="3">3星及以上</option>
+      <option value="4">4星及以上</option><option value="5">5星</option>
+    </select>
+    <select id="healthFilter">
+      <option value="">健康：全部</option>
+      <option value="A">A 档（≥80 优秀）</option>
+      <option value="B">B 档（60-79 良好）</option>
+      <option value="C">C 档（40-59 一般）</option>
+      <option value="D">D 档（&lt;40 需注意）</option>
+      <option value="none">未评分</option>
+    </select>
+    <div class="seg">
+      <button class="seg-btn on" data-view="card">卡片明细</button>
+      <button class="seg-btn" data-view="table">表格明细</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+
+  <div class="charts">
+    <div class="panel"><h3>📊 分类支出占比</h3><div id="catBars"></div></div>
+    <div class="panel"><h3>📅 月度支出趋势</h3><div id="monthChart"></div></div>
+    <div class="panel"><h3>🏷️ 品牌支出 Top</h3><div id="brandBars"></div></div>
+  </div>
+
+  <div id="content"></div>
+
+  <div class="footer">数据源：data/shopping.db · 由 scripts/sync_site.py 自动同步 · 图片来自本地知识库</div>
+</div>
+
+<div class="ver-badge" id="verBadge" title="当前部署版本">v…</div>
+
+<!-- 新增/编辑记录 -->
+<div id="itemModal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="itemTitle">新增记录</h3><button id="modalClose" type="button">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="fId">
+
+      <!-- 第一步：传图 → 立刻本地识别（不用点按钮） -->
+      <div class="step-box" id="stepUpload">
+        <div class="step-hd"><span class="step-no">1</span> 上传图片（可多选 / 可拖拽）<span class="step-hint">图片会立即保存并自动本地识别，不联网</span></div>
+        <div class="drop" id="dropZone">
+          <input id="fImg" type="file" accept="image/*" multiple hidden>
+          <div class="drop-in">
+            <div class="drop-ico">📷</div>
+            <div class="drop-txt">点击选择，或把图片拖到这里</div>
+            <div class="drop-sub">支持一次多选：订单截图、商品包装、营养成分表都行</div>
+          </div>
+        </div>
+        <div class="fname" id="fImgName"></div>
+        <div class="thumb-strip" id="thumbStrip"></div>
+        <div class="ocr-tip" id="ocrTip"></div>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="ghost sm" type="button" id="manualBtn">不传图，手动填写</button>
+          <button class="primary sm" type="button" id="ocrBtn" style="display:none">重新识别</button>
+        </div>
+      </div>
+
+      <!-- 或：已有商品再买一次 -->
+      <div class="step-box" id="stepReuse">
+        <div class="step-hd"><span class="step-no">或</span> 已有商品再买一次<span class="step-hint">选中后只补这次的购买信息，不重复建商品</span></div>
+        <input id="reuseSearch" placeholder="搜索已有商品：名称 / 品牌…" autocomplete="off">
+        <div class="reuse-list" id="reuseList"></div>
+        <div class="reuse-pick" id="reusePick" style="display:none"></div>
+      </div>
+
+      <!-- 第二步：核对并补全字段（识别完成或点「手动填写」后展开） -->
+      <div class="step-box" id="stepFields" style="display:none">
+        <div class="step-hd"><span class="step-no">2</span> 核对并补全<span class="step-hint" id="step2Hint">识别到的已自动填好（标绿），剩下的手动补</span></div>
+        <div class="form-grid">
+          <div class="full only-new"><label>名称 <b class="req">*</b> <em class="src" id="srcName"></em></label>
+            <input id="fName" placeholder="如：茶颜悦色 脆脆条 25g"></div>
+          <div><label>价格（元） <b class="req">*</b> <em class="src" id="srcPrice"></em></label>
+            <input id="fPrice" type="number" step="0.01" placeholder="0.00"></div>
+          <div class="only-new"><label>分类 <em class="src" id="srcCategory"></em></label>
+            <select id="fCategory"></select></div>
+          <div class="only-new"><label>品牌 <em class="src" id="srcBrand"></em></label>
+            <input id="fBrand" placeholder="如：优衣库"></div>
+          <div><label>渠道</label>
+            <select id="fChannel">
+              <option value="">未指定</option>
+              <option>天猫</option><option>淘宝</option><option>京东</option>
+              <option>拼多多</option><option>盒马</option><option>饿了么</option>
+              <option>美团</option><option>线下超市</option><option>便利店</option>
+              <option>品牌官网</option><option>积分兑换</option><option>其他</option>
+            </select></div>
+          <div><label>数量</label><input id="fQuantity" type="number" step="1" min="1" placeholder="1"></div>
+          <div><label>购买日期</label><input id="fDate" type="date"></div>
+          <div class="only-new"><label>到期日期 <em class="src" id="srcExpiry"></em></label><input id="fExpiry" type="date"></div>
+          <div class="only-new"><label>保质期 <em class="src" id="srcShelf"></em></label>
+            <input id="fShelf" placeholder="如：180 天 / 12 个月"></div>
+          <div class="only-new"><label>是否回购</label>
+            <select id="fRepurchase">
+              <option value="">未评价</option>
+              <option value="yes">会回购</option>
+              <option value="maybe">看情况</option>
+              <option value="no">不回购</option>
+            </select></div>
+          <div class="full only-new"><label>配料表 <em class="src" id="srcIngredients"></em></label>
+            <input id="fIngredients" placeholder="如：水、小麦粉、白砂糖…"></div>
+          <div class="full"><label>评价</label><textarea id="fReview" placeholder="使用体验、优缺点…"></textarea></div>
+        </div>
+      </div>
+
+      <!-- 第三步：分享范围 -->
+      <div class="step-box" id="stepShare" style="display:none">
+        <div class="step-hd"><span class="step-no">3</span> 分享范围</div>
+        <div class="form-grid">
+          <div class="full"><label>谁能看到这条记录</label>
+            <select id="fVisibility">
+              <option value="public">公开 — 所有人可见，别人能看到你的评价（默认）</option>
+              <option value="private">私有 — 仅自己可见</option>
+            </select></div>
+          <div class="full" id="shareNoteWrap"><label>分享备注（可选，公开时他人可见）</label>
+            <input id="fShareNote" placeholder="如：这款性价比很高，推荐给同事"></div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="ghost" type="button" onclick="document.getElementById('itemModal').classList.remove('on')">取消</button>
+        <button class="primary" type="button" id="itemSave">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal">
+  <div class="modal-card wide">
+    <div class="modal-head"><h3>设置</h3><button id="settingsClose" type="button">✕</button></div>
+    <div class="modal-body">
+      <div class="st-sec">
+        <h4>我的账号</h4>
+        <div class="kv"><span>用户名</span><b id="sUsername">-</b></div>
+        <div class="kv"><span>账号类型</span><b id="sRole">-</b></div>
+        <div class="kv"><span>注册时间</span><b id="sCreated">-</b></div>
+      </div>
+
+      <div class="st-sec">
+        <h4>API Token</h4>
+        <p class="st-hint">供 CLI / skill / API 客户端使用。重置后旧 Token 立即失效，需要重新配置。</p>
+        <div class="tok-label">当前 Token（仅本人可见，点「复制」整段带走）</div>
+        <code class="token-box" id="sTokenShow">-</code>
+        <div class="btn-row">
+          <button class="ghost sm" type="button" id="tokenCopyBtn">复制</button>
+          <button class="ghost sm" type="button" id="tokenResetBtn">重置 Token</button>
+        </div>
+        <div class="st-msg" id="tokenMsg"></div>
+      </div>
+
+      <div class="st-sec">
+        <h4>修改密码</h4>
+        <p class="st-hint">至少 8 位，需包含字母、数字、符号中的两类。改密后需重新登录。</p>
+        <div class="form-grid">
+          <div class="full"><label>当前密码</label><input id="sOldPwd" type="password" autocomplete="current-password"></div>
+          <div><label>新密码</label><input id="sNewPwd" type="password" autocomplete="new-password"></div>
+          <div><label>确认新密码</label><input id="sNewPwd2" type="password" autocomplete="new-password"></div>
+        </div>
+        <div class="btn-row"><button class="primary sm" type="button" id="pwdSaveBtn">修改密码</button></div>
+        <div class="st-msg" id="pwdMsg"></div>
+      </div>
+
+      <div class="st-sec" id="adminSec" style="display:none">
+        <h4>用户管理（管理员）</h4>
+        <label class="st-check"><input type="checkbox" id="sAllowReg"> 开放注册</label>
+        <div class="btn-row" style="margin:10px 0">
+          <button class="ghost primary" type="button" id="tabUsers">全部用户</button>
+          <button class="ghost" type="button" id="tabBin">回收站</button>
+        </div>
+        <div class="st-hint" id="userBinHint" style="display:none">
+          回收站内的账号无法登录、数据完整保留。恢复后立即可用；永久删除才会真正删掉该用户的记录和图片。
+        </div>
+        <div id="userList" class="user-list"></div>
+        <div class="st-msg" id="userMsg"></div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="ghost" type="button" id="logoutBtn">退出登录</button>
+        <button class="primary" type="button" onclick="document.getElementById('settingsModal').classList.remove('on')">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="lb">
+  <button class="close" id="lbClose">✕</button>
+  <button class="nav prev" id="lbPrev">‹</button>
+  <img id="lbImg" alt="">
+  <button class="nav next" id="lbNext">›</button>
+  <div class="cap" id="lbCap"></div>
+</div>
+
+<!-- 展示层公共库：esc / money / starStr（半星）/ healthColor / nutriTable 等。
+     与公开广场 public.html 共用，改展示只改这一个文件 -->
+<script src="/shared.js"></script>
+<script>
+const CAT_COLOR = {
+  "食物":"#e5484d","衣服":"#2f6bff","鞋":"#7c5cff","包配":"#c2569b","美妆护肤":"#e8935a",
+  "数码家电":"#0f9b8e","家居日用":"#5b8def","母婴":"#e06ba8","运动户外":"#3aa76d",
+  "图书文具":"#8a7af0","药品保健":"#4fa3d1","餐饮":"#f0a524","宠物":"#9a7b4f","其他":"#8b95a5"
+};
+const CAT_ICON = {"食物":"🍱","衣服":"👕","鞋":"👟","包配":"👜","美妆护肤":"💄","数码家电":"💻",
+  "家居日用":"🏠","母婴":"🍼","运动户外":"🏃","图书文具":"📚","药品保健":"💊","餐饮":"🍜","宠物":"🐾","其他":"📦"};
+
+const state = {q:"", cat:"", range:"all", sort:"date", repurchase:"", rating:"", shop:"",
+               health:"", view:"card"};
+let items = [];
+
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+/* 健康指数与档次的唯一入口：后端算好的 health_score / health_grade 为准，
+   老数据（后端还没算过分的）才回退到前端估算，阈值与后端 GRADE_BANDS 一致 */
+function healthOf(it){
+  const s = it && it.health_score != null ? it.health_score : healthScore(it && it.nutrition);
+  return s === "" || s == null ? null : s;
+}
+function gradeOf(it){
+  if(!it) return null;
+  if(it.health_grade) return it.health_grade;
+  const s = healthOf(it);
+  return s == null ? null : healthGrade(s);
+}
+/* 档次筛选：A/B/C/D 走档次，none = 还没评分（没有营养与配料数据的记录） */
+function healthMatch(it){
+  const h = state.health;
+  if(!h) return true;
+  const g = gradeOf(it);
+  return h === "none" ? g == null : g === h;
+}
+
+/* 注：money / amt / esc / starStr（半星）/ NUTRI_* / healthScore / healthGrade /
+   healthColor / nutriTable / nutriSummary 全部来自 site/shared.js，与公开广场 public.html
+   共用同一份实现。要改展示逻辑就改 shared.js，不要在这里重复定义。 */
+
+function kvRows(it){
+  return [["生产日期",it.produced_date],["到期日期",it.expiry_date],["保质期",it.shelf_life],["使用方法",it.eating_method],
+    ["委托方",it.entrusting_party+(it.entrusting_address?" · "+it.entrusting_address:"")],
+    ["生产商",it.manufacturer+(it.manufacturer_address?" · "+it.manufacturer_address:"")+(it.manufacturer_phone?" · "+it.manufacturer_phone:"")],
+    ["产地",it.origin],["贮存条件",it.storage_condition],["许可证",it.license],["服务热线",it.service_hotline],
+    ["过敏原",it.allergens],["温馨提示",it.tips],["配置/规格",it.specs],["适应症",it.indications],
+    ["用法用量",it.dosage],["禁忌",it.contraindications],["不良反应",it.adverse_reactions],
+    ["注意事项",it.cautions],["批准文号",it.approval_no],
+    ["图片描述",it.image_desc],["来源",it.source],["记录时间",it.created_at]]
+    .filter(r=>r[1]!=null && String(r[1])!=="");
+}
+function kvHTML(rows){
+  return rows.length?`<div class="kv">${rows.map(r=>`<div><b>${esc(r[0])}</b><span>${esc(String(r[1]))}</span></div>`).join("")}</div>`:"";
+}
+/* 历史购买列表（只产内部结构，外层 <details> 由 purchaseBlockHTML 统一包）
+   0.6.0：优先用服务端 purchases 表（一次购买一行，权威来源）；
+   老数据的 purchase_history JSON 作为兜底。 */
+function phListHTML(it){
+  let orders = Array.isArray(it.purchases) ? it.purchases : null;
+  if(!orders){
+    if(!it.purchase_history) return "";
+    try { orders = JSON.parse(it.purchase_history); } catch(e){ return ""; }
+    // 老 JSON 用的是 date 字段，统一成 purchase_date
+    orders = (orders||[]).map(o=>Object.assign({}, o, {purchase_date:o.purchase_date||o.date}));
+  }
+  if(!Array.isArray(orders) || !orders.length) return "";
+  const rows = orders.map(o=>{
+    const date = o.purchase_date || o.date || "—";
+    const qty = (o.quantity && o.quantity!==1) ? `<span class="ph-qty">×${o.quantity}</span>` : "";
+    const details = [];
+    if(o.price!=null) details.push(`实价 ${money(o.price)}`);
+    if(o.original_price!=null) details.push(`原价 ${money(o.original_price)}`);
+    if(o.paid_price!=null) details.push(`实付 ${money(o.paid_price)}`);
+    if(o.gift_card_value) details.push(`礼品卡 ${money(o.gift_card_value)}`);
+    if(o.jd_bean_value) details.push(`京豆 ${money(o.jd_bean_value)}`);
+    const src = o.source || o.channel || "";
+    const exp = [];
+    if(o.produced_date) exp.push(`生产 ${o.produced_date}`);
+    if(o.shelf_life) exp.push(`保质 ${o.shelf_life}`);
+    if(o.expiry_date) exp.push(`到期 ${o.expiry_date}`);
+    return `<div class="ph-row">
+      <div class="ph-head"><b>${esc(date)}</b>${qty}${o.id?`<button class="pdel" data-pid="${o.id}" data-iid="${it.id}" title="删掉这一次购买（商品保留）">✕</button>`:""}</div>
+      ${details.length?`<div class="ph-price">${details.map(d=>`<span>${d}</span>`).join("")}</div>`:""}
+      ${exp.length?`<div class="ph-exp">${exp.map(d=>`<span>${d}</span>`).join("")}</div>`:""}
+      ${src?`<div class="ph-src">来源：${esc(src)}</div>`:""}
+    </div>`;
+  }).join("");
+  return `<div class="ph-list">${rows}</div>`;
+}
+
+/* 「购买记录」折叠块：生产日期 / 保质期 / 到期日期归到这里，
+   不再和「使用方法」挤在一起（0.5.2）。
+   没有生产/到期信息、也没有多次购买历史时就不显示这一块。 */
+function purchaseBlockHTML(it){
+  const dateRows=[["生产日期",it.produced_date],["保质期",it.shelf_life],["到期日期",it.expiry_date]]
+    .filter(r=>r[1]!=null && String(r[1])!=="");
+  const list=phListHTML(it);
+  if(!dateRows.length && !list) return "";
+  const n = it.purchase_count || (Array.isArray(it.purchases)? it.purchases.length : 0);
+  const stat = n>1 ? ` · ${n} 次${it.total_spent!=null?" · 合计 "+money(it.total_spent):""}${it.avg_price!=null?" · 均价 "+money(it.avg_price):""}` : "";
+  const label = "购买记录"+stat;
+  return `<details class="extra"><summary>${label}</summary>${kvHTML(dateRows)}${list}</details>`;
+}
+
+function extraBlocks(it){
+  const s = healthOf(it);
+  const grade = gradeOf(it);
+  const b1 = (it.ingredients || it.nutrition_analysis || it.health_reason || (it.nutrition && Object.keys(it.nutrition).length))
+    ? `<details class="extra"><summary>营养成分 + 配料表${s!=null?` · 健康指数 ${s}（${grade} ${esc(it.health_level||GRADE_LABEL[grade]||"")}）`:""}</summary>
+      ${nutriTable(it.nutrition)}
+      ${it.ingredients?`<div class="ing"><b>配料</b>：${esc(it.ingredients)}</div>`:""}
+      ${it.nutrition_analysis?`<div class="note">${esc(it.nutrition_analysis)}</div>`:""}
+      ${it.health_reason?`<div class="note">健康评分理由：${esc(it.health_reason)}</div>`:""}
+    </details>` : "";
+  const rows = kvRows(it);
+  /* 使用方法单独一块；生产日期 / 到期日期 / 保质期移到「购买记录」块 */
+  const moved = ["生产日期","到期日期","保质期","使用方法"];
+  const useRows = rows.filter(r=>r[0]==="使用方法");
+  const bUse = useRows.length
+    ? `<details class="extra"><summary>使用方法</summary>${kvHTML(useRows)}</details>` : "";
+  const other = rows.filter(r=>!moved.includes(r[0]));
+  const b3 = other.length
+    ? `<details class="extra"><summary>其他信息</summary>${kvHTML(other)}</details>` : "";
+  const bBuy = purchaseBlockHTML(it);
+  return (b1||bUse||b3||bBuy)?`<div class="blocks">${b1}${bUse}${b3}${bBuy}</div>`:"";
+}
+
+function filtered(){
+  let out = items.filter(it=>{
+    if(state.cat && (it.category||"其他")!==state.cat) return false;
+    if(state.repurchase && (it.repurchase||"")!==state.repurchase) return false;
+    if(state.rating && !(it.rating && it.rating>=+state.rating)) return false;
+    if(state.shop && (it.channel||"线下")!==state.shop) return false;
+    if(!healthMatch(it)) return false;
+    if(state.range!=="all"){
+      const limit = new Date(); limit.setDate(limit.getDate()- (+state.range));
+      if(it.purchase_date < limit.toISOString().slice(0,10)) return false;
+    }
+    if(state.q){
+      const q=state.q.toLowerCase();
+      const hay=[it.name,it.brand,it.review,it.category,it.channel,it.place,(it.tags||[]).join(","),(it.subcategory||"")]
+        .filter(Boolean).join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const s=state.sort;
+  out.sort((a,b)=> s==="date" ? (b.purchase_date||"").localeCompare(a.purchase_date||"")
+    : s==="dateAsc" ? (a.purchase_date||"").localeCompare(b.purchase_date||"")
+    : s==="price" ? (b.price||0)-(a.price||0)
+    : s==="priceAsc" ? (a.price||0)-(b.price||0)
+    : (b.rating||0)-(a.rating||0));
+  return out;
+}
+
+function renderKpis(list){
+  const total=list.reduce((s,i)=>s+amt(i),0);
+  const rated=list.filter(i=>i.rating);
+  const avg=rated.length? (rated.reduce((s,i)=>s+i.rating,0)/rated.length).toFixed(1):"—";
+  const now=todayStr().slice(0,7);
+  const month=list.filter(i=>(i.purchase_date||"").startsWith(now)).reduce((s,i)=>s+amt(i),0);
+  const cats=new Set(list.map(i=>i.category||"其他")).size;
+  // 健康指数统一取后端已算好的 health_score（后端为唯一权威来源）
+  const food=list.filter(i=>healthOf(i)!=null);
+  const avgHealth = food.length ? Math.round(food.reduce((s,i)=>s+healthOf(i),0)/food.length) : null;
+  const kpis=[["筛选出账总额", money(total), ""], ["件数", list.length, `共 ${cats} 个分类`],
+    ["平均评分", avg, rated.length? `${rated.length} 件已评分` : "暂无评分"], ["本月支出", money(month), now]];
+  if(avgHealth!=null) kpis.push(["食品健康指数", avgHealth+"/100", `${food.length} 件食品`]);
+  document.getElementById("kpis").innerHTML = kpis.map(([k,v,s])=>
+    `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s?` <small>${s}</small>`:""}</div></div>`).join("");
+}
+
+function renderChips(list){
+  const counts={}; list.forEach(i=>{const c=i.category||"其他";counts[c]=(counts[c]||0)+1;});
+  const cats=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const all=`<div class="chip ${state.cat===""?"on":""}" data-cat="">全部 ${list.length}</div>`;
+  document.getElementById("chips").innerHTML = all + cats.map(c=>
+    `<div class="chip ${state.cat===c?"on":""}" data-cat="${esc(c)}">${CAT_ICON[c]||"📦"} ${esc(c)} ${counts[c]}</div>`).join("");
+  document.querySelectorAll(".chip").forEach(el=>el.onclick=()=>{
+    state.cat=el.dataset.cat;
+    if(state.view==="summary" && state.cat) state.view="card";
+    document.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("on",x.dataset.view===state.view));
+    render();
+  });
+}
+
+function barRow(label, val, total, color){
+  return `<div class="bar-row"><span>${label}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${total?Math.max(2,val/total*100):0}%;background:${color}"></div></div>
+    <span class="bar-val">${money(val)} · ${total?Math.round(val/total*100):0}%</span></div>`;
+}
+
+function renderCharts(list){
+  const total=list.reduce((s,i)=>s+amt(i),0);
+  const byCat={}; list.forEach(i=>{const c=i.category||"其他";byCat[c]=(byCat[c]||0)+amt(i);});
+  document.getElementById("catBars").innerHTML = Object.keys(byCat).length?
+    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>barRow(`${CAT_ICON[c]||"📦"} ${esc(c)}`, v, total, CAT_COLOR[c]||"#8b95a5")).join("")
+    : `<div class="empty">暂无数据</div>`;
+
+  const byM={}; list.forEach(i=>{const m=(i.purchase_date||"").slice(0,7); if(m) byM[m]=(byM[m]||0)+amt(i);});
+  const ms=Object.keys(byM).sort().slice(-12);
+  const mx=Math.max(1,...ms.map(m=>byM[m]));
+  document.getElementById("monthChart").innerHTML = ms.length?
+    `<div class="month-chart">${ms.map(m=>`
+      <div class="month-col" title="${m}：${money(byM[m])}">
+        <div class="amt">${Math.round(byM[m])}</div>
+        <div class="col" style="height:${byM[m]/mx*100}%"></div>
+        <div class="lbl">${m.slice(2)}</div></div>`).join("")}</div>`
+    : `<div class="empty">暂无数据</div>`;
+
+  /* 品牌 Top */
+  const byBrand={}; list.forEach(i=>{if(i.brand) byBrand[i.brand]=(byBrand[i.brand]||0)+amt(i);});
+  const brands=Object.entries(byBrand).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById("brandBars").innerHTML = brands.length?
+    brands.map(([b,v])=>barRow(esc(b.length>12?b.slice(0,12)+"…":b), v, total, "var(--accent2)")).join("")
+    : `<div class="empty">暂无数据</div>`;
+}
+
+function cardBodyHTML(it, withDel){
+  const imgs=it.images||[];
+  const thumb = imgs.length
+    ? `<img src="${esc(imgs[0])}" alt="" loading="lazy" onclick="event.stopPropagation();openLb(${it.id},0)">
+       ${imgs.length>1?`<span class="n-img">${imgs.length} 张</span>`:""}`
+    : `<span class="ph">${CAT_ICON[it.category]||"📦"}</span>`;
+  const srcTag = it.source && String(it.source).includes("示例") ? `<span class="src-tag">示例数据</span>` : "";
+  const delBtn = withDel ? `<button class="del" data-id="${it.id}" data-name="${esc(it.name)}" title="删除">🗑</button>` : "";
+  const editBtn = withDel ? `<button class="edit" data-id="${it.id}" data-name="${esc(it.name)}" data-price="${it.price}" data-category="${esc(it.category||'其他')}" data-channel="${esc(it.channel||'')}" title="编辑">✏️</button>` : "";
+  const rebuyBtn = withDel ? `<button class="rebuy" data-id="${it.id}" title="再买一次">🛒</button>` : "";
+  const rp = it.repurchase==="yes"?`<span class="tag re">会回购</span>`
+    : it.repurchase==="no"?`<span class="tag no">不回购</span>`
+    : it.repurchase==="maybe"?`<span class="tag mb">看情况</span>`:"";
+  const tags=(it.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  /* 健康指数与档次：后端算好的 health_score / health_grade 为准，
+     老数据没有时才回退到前端估算（阈值与后端 GRADE_BANDS 一致） */
+  const s = healthOf(it);
+  const grade = it.health_grade || (s!=null ? healthGrade(s) : null);
+  const hp = s!=null ? `<span class="health-pill" style="background:${healthColor(s)}" title="${esc(it.health_level||GRADE_LABEL[grade]||"")}">${esc(grade||"")} · ${s}</span>` : "";
+  const fn = it.flavor_name ? `<div class="flavor"><span>口味</span><b>${esc(it.flavor_name)}</b></div>` : "";
+  const acts = (delBtn||editBtn) ? `<div class="acts">${editBtn}${rebuyBtn}${delBtn}</div>` : "";
+  return `<div class="thumb">${thumb}${srcTag}${acts}</div>
+    <div class="body">
+      <div class="nm"><span>${esc(it.name)}</span>${hp}</div>
+      <div class="meta">${esc(it.category||"其他")}${it.subcategory?" · "+esc(it.subcategory):""}${it.brand?" · "+esc(it.brand):""}</div>
+      ${it.standard_no?`<div class="std"><span>执行标准</span><b>${esc(it.standard_no)}</b></div>`:""}
+      ${fn}
+      <div class="price">${money(it.price)}${(it.quantity&&it.quantity!==1)?`<span class="qty"> ×${it.quantity}</span>`:""}</div>
+      ${it.rating?`<div class="star">${starStr(it.rating)}</div>`:""}
+      ${it.review?`<div class="review">${esc(it.review)}</div>`:""}
+      ${nutriSummary(it.nutrition)}
+      ${(tags||rp)?`<div class="tags">${rp}${tags}</div>`:""}
+      ${extraBlocks(it)}
+      <div class="foot"><span>${esc(it.purchase_date||"")}</span><span>${it.channel?esc(it.channel):""}${it.place?" · "+esc(it.place):""}</span></div>
+    </div>`;
+}
+
+function cardHTML(it){
+  return `<div class="card">${cardBodyHTML(it, true)}</div>`;
+}
+
+/* 同产品多口味聚合卡片：tab 切换口味 */
+function groupHTML(group){
+  const items=group.items;
+  const tabs=items.map((it,i)=>`<button class="gtab ${i===0?"on":""}" data-i="${i}">${esc(it.flavor_name||it.name)}</button>`).join("");
+  const panels=items.map((it,i)=>`<div class="grp-panel ${i===0?"on":""}" data-i="${i}">${cardBodyHTML(it, true)}</div>`).join("");
+  return `<div class="card grp-card"><div class="grp-tabs">${tabs}</div>${panels}</div>`;
+}
+
+function buildUnits(list){
+  const byGroup={}, singles=[];
+  list.forEach(it=>{
+    if(it.product_group){ (byGroup[it.product_group]=byGroup[it.product_group]||[]).push(it); }
+    else singles.push(it);
+  });
+  const units=[];
+  Object.keys(byGroup).forEach(k=>{
+    const items=byGroup[k];
+    const anchor=items.reduce((a,b)=> ((b.purchase_date||"")>(a.purchase_date||"")?b:a), items[0]);
+    units.push({type:"group", key:k, items, date:anchor.purchase_date||""});
+  });
+  singles.forEach(it=>units.push({type:"single", key:"s"+it.id, item:it, date:it.purchase_date||""}));
+  return units;
+}
+
+function renderTable(list){
+  if(!list.length) return `<div class="empty">没有符合条件的记录</div>`;
+  return `<div class="panel" style="overflow:auto"><table>
+    <thead><tr><th>图片</th><th>日期</th><th>分类</th><th>名称</th><th>品牌/渠道</th><th class="num">价格</th><th>评分</th><th>评价</th><th>回购</th></tr></thead>
+    <tbody>${list.map(it=>`<tr class="trow">
+      <td>${it.images&&it.images.length?`<img src="${esc(it.images[0])}" onclick="openLb(${it.id},0)">`:"—"}</td>
+      <td>${esc(it.purchase_date||"")}</td>
+      <td>${esc(it.category||"其他")}</td>
+      <td><b>${esc(it.name)}</b></td>
+      <td>${esc([it.brand,it.channel].filter(Boolean).join(" · "))}</td>
+      <td class="num">${money(it.price)}</td>
+      <td class="star">${starStr(it.rating)}</td>
+      <td>${esc(it.review||"")}</td>
+      <td>${it.repurchase==="yes"?"会回购":it.repurchase==="no"?"不回购":it.repurchase==="maybe"?"看情况":""}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+function render(){
+  const list=filtered();
+  renderKpis(list); renderChips(list); renderCharts(list);
+  const c=document.getElementById("content");
+  if(!list.length){ c.innerHTML=`<div class="panel"><div class="empty">没有符合条件的记录 🗂️</div></div>`; return; }
+  if(state.view==="table"){ c.innerHTML=renderTable(list); return; }
+
+  /* 卡片视图 + 品类分组（同一品类内多规格/口味聚合为 tab 卡片，单条商品也有汇总归属） */
+  const units=buildUnits(list);
+  const groups={}; units.forEach(u=>{
+    const cat=(u.item||u.items[0]).category||"其他";
+    (groups[cat]=groups[cat]||[]).push(u);
+  });
+  const total=list.reduce((s,i)=>s+amt(i),0);
+  const cats=Object.keys(groups).sort((a,b)=>
+    groups[b].reduce((s,u)=>s+(u.items||[u.item]).reduce((x,i)=>x+amt(i),0),0)-
+    groups[a].reduce((s,u)=>s+(u.items||[u.item]).reduce((x,i)=>x+amt(i),0),0)
+  );
+  c.innerHTML = cats.map(cat=>{
+    const arr=groups[cat];
+    const sum=arr.reduce((s,u)=>s+(u.items||[u.item]).reduce((x,i)=>x+amt(i),0),0);
+    const pct=total? Math.round(sum/total*100):0;
+    const g=`<div class="month-gap"><h2>${CAT_ICON[cat]||"📦"} ${esc(cat)}</h2><span>${arr.length} 件 · ${money(sum)}${pct?` · ${pct}%`:""}</span></div>`;
+    return g+`<div class="grid">${arr.map(u=>u.type==="group"?groupHTML(u):cardHTML(u.item)).join("")}</div>`;
+  }).join("");
+}
+
+/* 灯箱 */
+let lbList=[], lbI=0, lbItem=null;
+function openLb(id,i){
+  lbItem=items.find(x=>x.id===id); lbList=lbItem.images||[]; lbI=i||0;
+  if(!lbList.length) return;
+  document.getElementById("lb").classList.add("on"); showLb();
+}
+function showLb(){
+  document.getElementById("lbImg").src=lbList[lbI];
+  document.getElementById("lbCap").textContent=`${lbItem.name} · ${money(lbItem.price)} · ${lbItem.purchase_date}（${lbI+1}/${lbList.length}）`;
+}
+document.getElementById("lbNext").onclick=()=>{lbI=(lbI+1)%lbList.length;showLb();};
+document.getElementById("lbPrev").onclick=()=>{lbI=(lbI-1+lbList.length)%lbList.length;showLb();};
+document.getElementById("lbClose").onclick=()=>document.getElementById("lb").classList.remove("on");
+document.getElementById("lb").onclick=e=>{if(e.target.id==="lb")document.getElementById("lb").classList.remove("on");};
+
+/* 卡片上删除按钮：事件委托，避免点删除时触发打开详情 */
+document.addEventListener("click",e=>{
+  const tab=e.target.closest(".gtab");
+  if(tab){
+    const card=tab.closest(".grp-card");
+    if(card){
+      const i=tab.dataset.i;
+      card.querySelectorAll(".gtab").forEach(t=>t.classList.toggle("on",t.dataset.i===i));
+      card.querySelectorAll(".grp-panel").forEach(p=>p.classList.toggle("on",p.dataset.i===i));
+    }
+    return;
+  }
+  const del=e.target.closest(".del");
+  if(del){ e.stopPropagation(); delItem(+del.dataset.id, del.dataset.name); }
+});
+
+/* 删除商品：调用 API，成功后从数据源移除 */
+function delItem(id,name){
+  if(!confirm(`确定删除「${name}」吗？\n该商品将从记录库永久删除，无法恢复。`)) return;
+  fetch("/api/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){
+        const i=items.findIndex(x=>x.id===id);
+        if(i>-1) items.splice(i,1);
+        render(); alert("已删除「"+name+"」");
+      } else alert("删除失败："+(d.error||"未知错误"));
+    })
+    .catch(()=>alert("删除失败，请确认服务已运行"));
+}
+
+/* ---- 0.1 多用户：数据加载 / 新增 / 编辑 / 设置 ---- */
+function api(path, opts={}){
+  return fetch("/api"+path, Object.assign({headers:{"Content-Type":"application/json"}}, opts))
+    .then(r=>r.json());
+}
+let ME_ID=null, ME_IS_ADMIN=false, ME_TOKEN="";
+function loadMe(){
+  return api("/me").then(d=>{
+    if(d.ok){ ME_ID=d.id; ME_IS_ADMIN=!!d.is_admin; }
+  }).catch(()=>{});
+}
+function loadItems(){
+  api("/items")
+    .then(d=>{
+      if(d.ok){
+        items=(d.items||[]).map(r=>({...r, images:r.images||[], tags:r.tags||[]}));
+        initShopOptions(); render();
+      } else if(d.error==="未登录"){
+        location.href="/login.html";
+      } else alert("加载失败："+(d.error||"未知错误"));
+    })
+    .catch(()=>alert("加载失败，请确认服务已运行"));
+}
+function initShopOptions(){
+  const sel=document.getElementById("shop");
+  const cur=state.shop;
+  sel.innerHTML='<option value="">店铺：全部</option>';
+  [...new Set(items.map(i=>i.channel||"线下").filter(Boolean))].sort()
+    .forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;sel.appendChild(o);});
+  sel.value=cur;
+}
+
+const CATEGORIES=["食物","衣服","鞋","包配","美妆护肤","数码家电","家居日用","母婴","运动户外","图书文具","药品保健","餐饮","宠物","其他"];
+(function(){
+  const sel=document.getElementById("fCategory");
+  CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);});
+})();
+function clearOcrExtra(){
+  ["fName","fPrice","fBrand","fQuantity","fExpiry","fShelf","fIngredients","fRepurchase","fShareNote"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value="";
+  });
+  document.querySelectorAll(".src").forEach(el=>el.classList.remove("on"));
+  document.getElementById("ocrTip").innerHTML="";
+  const btn=document.getElementById("ocrBtn"); if(btn) btn.style.display="none";
+}
+/* 标记某字段是 OCR 填的还是手填的 */
+function markSrc(fieldId){
+  const el=document.getElementById("src"+fieldId.slice(1));
+  if(el){ el.textContent="已识别"; el.classList.add("on"); }
+}
+/* ---------- 图片：选好即上传，保存时只提交路径 ---------- */
+let formImages=[];   // 已归档图片的相对路径（images/YYYY-MM/xxx.jpg）
+let uploading=0;
+
+function renderThumbs(){
+  const box=document.getElementById("thumbStrip");
+  if(!box) return;
+  const items=formImages.map((p,idx)=>
+    `<div class="mini"><img src="/${esc(p)}" alt="">
+       <button class="del" type="button" data-idx="${idx}" title="删除这张">✕</button></div>`).join("");
+  const busy=uploading>0?'<div class="mini"><div class="up">上传中…</div></div>':"";
+  box.innerHTML=items+busy;
+  box.querySelectorAll(".del").forEach(b=>{
+    b.onclick=()=>{ formImages.splice(+b.dataset.idx,1); renderThumbs(); updateImgHint(); };
+  });
+}
+function updateImgHint(){
+  const n=formImages.length;
+  const nameEl=document.getElementById("fImgName");
+  const btn=document.getElementById("ocrBtn");
+  if(n){
+    nameEl.textContent=`已保存 ${n} 张图片`;
+    if(btn) btn.style.display="inline-block";
+    document.getElementById("ocrTip").textContent="点「识别并填充」自动填好能识别的字段，你再补剩下的。点图片右上角 ✕ 删单张，保存后生效。";
+  } else {
+    nameEl.textContent="";
+    if(btn) btn.style.display="none";
+    document.getElementById("ocrTip").textContent="";
+  }
+}
+/* 选图后立刻上传归档：图片先存下来，保存记录时只提交路径。
+   好处：编辑也能追加图片；中途放弃保存只会留下孤儿文件，不会产生空记录。 */
+function refreshImgName(){
+  const files=document.getElementById("fImg").files;
+  if(!files || !files.length) return;
+  const arr=Array.from(files);
+  uploading+=1; renderThumbs();
+  const reads=arr.map(f=>new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=()=>res(String(rd.result).split(",")[1]);
+    rd.onerror=rej;
+    rd.readAsDataURL(f);
+  }));
+  Promise.all(reads).then(b64s=>
+    api("/images",{method:"POST",body:JSON.stringify({
+      images:b64s,
+      purchase_date:document.getElementById("fDate").value||undefined,
+      name:document.getElementById("fName").value.trim()||undefined
+    })})
+  ).then(d=>{
+    uploading-=1;
+    document.getElementById("fImg").value="";
+    if(!d.ok){ renderThumbs(); alert("图片上传失败："+(d.error||"未知错误")); return; }
+    (d.images||[]).forEach(x=>formImages.push(x));
+    renderThumbs(); updateImgHint();
+    // 0.6.0：传完立刻自动识别，省掉手动点「识别并填充」这一步
+    runOcr(true);
+  }).catch(e=>{ uploading-=1; renderThumbs(); alert("图片上传失败："+e.message); });
+}
+/* 0.6.0：传完图自动识别，不用再点按钮。识别完自动展开第二步。 */
+function runOcr(auto){
+  if(!formImages.length){ if(!auto) alert("请先选择图片"); return; }
+  const tip=document.getElementById("ocrTip");
+  tip.textContent="正在本地识别（不联网）…";
+  api("/ocr",{method:"POST",body:JSON.stringify({paths:formImages})}).then(d=>{
+    if(!d.ok){ tip.textContent="识别失败："+(d.error||"未知错误"); revealFields(); return; }
+    const f=d.fields||{};
+    // 只填空字段：用户已经手动填过的不覆盖
+    const set=(id,v)=>{
+      const el=document.getElementById(id);
+      if(!el || v==null || v==="") return;
+      if(el.value && el.value.trim()!=="") return;
+      el.value=v; markSrc(id);
+    };
+    set("fName",f.name); set("fPrice",f.price); set("fBrand",f.brand);
+    set("fCategory",f.category); set("fQuantity",f.quantity);
+    set("fDate",f.purchase_date); set("fExpiry",f.expiry_date);
+    set("fShelf",f.shelf_life); set("fIngredients",f.ingredients);
+    const h=d.health||{};
+    const got=["name","brand","price","category","quantity","expiry_date","shelf_life","ingredients"]
+      .filter(k=>f[k]!=null && f[k]!=="").length;
+    tip.innerHTML=(h.score!=null?`健康评分：<b>${h.score}</b>（${h.level}）<br>`:"")
+      +(got?`已自动填充 <b>${got}</b> 项（标绿色的字段）。<br>下面核对一下，缺的补上就能保存。`
+            :"没识别出有效字段，请手动填写名称和价格。");
+    revealFields();
+  }).catch(e=>{ tip.textContent="识别失败："+e.message; revealFields(); });
+}
+
+/* 展开第二/第三步（识别完或点了「手动填写」） */
+function revealFields(){
+  document.getElementById("stepFields").style.display="";
+  document.getElementById("stepShare").style.display="";
+}
+/* 模式：new=新建商品（可传图） / reuse=已有商品再买一次 */
+let entryMode="new", reuseId=null;
+function setEntryMode(m){
+  entryMode=m;
+  document.querySelectorAll("#stepFields .only-new").forEach(el=>{
+    el.style.display = (m==="reuse")?"none":"";
+  });
+  document.getElementById("stepUpload").style.display=(m==="reuse")?"none":"";
+  document.getElementById("stepFields").style.display="";
+  document.getElementById("stepShare").style.display="";
+  document.getElementById("step2Hint").textContent =
+    m==="reuse" ? "只补这次的购买信息即可，商品档案不会重复创建" : "识别到的已自动填好（标绿），剩下的手动补";
+}
+/* 已有商品候选：按 名称+品牌 去重，保留买得最多的那个 */
+function productOptions(){
+  const seen=new Map();
+  items.forEach(it=>{
+    const key=(it.name||"")+"|"+(it.brand||"");
+    const old=seen.get(key);
+    if(!old || (it.purchase_count||1)>(old.purchase_count||1)) seen.set(key,it);
+  });
+  return [...seen.values()];
+}
+function renderReuseList(){
+  const q=(document.getElementById("reuseSearch").value||"").trim().toLowerCase();
+  const box=document.getElementById("reuseList");
+  const all=productOptions().sort((a,b)=>(b.purchase_count||1)-(a.purchase_count||1));
+  const list=(q? all.filter(it=>[it.name,it.brand,it.category].filter(Boolean).join(" ").toLowerCase().includes(q)) : all).slice(0,10);
+  if(!list.length){ box.innerHTML=`<div class="rm" style="color:var(--muted);font-size:12px">${q?"没找到匹配的商品":"还没有记录，先传图或手动新增一件吧"}</div>`; return; }
+  box.innerHTML=list.map(it=>{
+    const img=(it.images&&it.images.length)?`<img src="/${esc(it.images[0])}" alt="">`:`<span style="width:30px"></span>`;
+    return `<div class="reuse-item" data-id="${it.id}">
+      ${img}
+      <span><span class="rn">${esc(it.name)}</span>${it.brand?` <span class="rm">· ${esc(it.brand)}</span>`:""}</span>
+      <span class="rc">已买 ${it.purchase_count||1} 次${it.price!=null?" · 上次 "+money(it.price):""}</span>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".reuse-item").forEach(el=>{
+    el.onclick=()=>pickReuse(+el.dataset.id);
+  });
+}
+function pickReuse(id){
+  const it=items.find(x=>x.id===id); if(!it) return;
+  reuseId=id;
+  document.getElementById("reusePick").style.display="flex";
+  document.getElementById("reusePick").innerHTML=
+    `再买一次：<b>${esc(it.name)}</b>${it.brand?" · "+esc(it.brand):""}
+     <button type="button" id="reuseClear">取消</button>`;
+  document.getElementById("reuseClear").onclick=clearReuse;
+  setEntryMode("reuse");
+  // 预填上次购买的价格/渠道，用户只需改价格与日期
+  const p=(it.purchases&&it.purchases[0])||{};
+  if(document.getElementById("fPrice").value==="" && p.price!=null) document.getElementById("fPrice").value=p.price;
+  if(!document.getElementById("fChannel").value && p.channel) document.getElementById("fChannel").value=p.channel;
+  document.getElementById("fQuantity").value=1;
+  document.getElementById("fDate").value=todayStr();
+}
+function clearReuse(){
+  reuseId=null;
+  document.getElementById("reusePick").style.display="none";
+  document.getElementById("reuseSearch").value="";
+  renderReuseList();
+  setEntryMode("new");
+}
+/* 卡片上的「再买一次」：直接打开弹窗并预选该商品 */
+function openRepurchase(id){
+  openAddModal();
+  pickReuse(id);
+}
+function openAddModal(){
+  const m=document.getElementById("itemModal");
+  document.getElementById("itemTitle").textContent="新增记录";
+  document.getElementById("fId").value="";
+  clearOcrExtra();
+  document.getElementById("fCategory").value="其他";
+  document.getElementById("fChannel").value="";
+  document.getElementById("fDate").value=todayStr();
+  document.getElementById("fQuantity").value="1";
+  document.getElementById("fVisibility").value="public";
+  document.getElementById("fImg").value="";
+  formImages=[]; uploading=0;
+  renderThumbs(); updateImgHint();
+  // 0.6.0：新增默认只显示「传图 / 选已有商品」，识别完再展开字段
+  reuseId=null;
+  document.getElementById("reusePick").style.display="none";
+  document.getElementById("reuseSearch").value="";
+  document.getElementById("stepFields").style.display="none";
+  document.getElementById("stepShare").style.display="none";
+  document.querySelectorAll("#stepFields .only-new").forEach(el=>el.style.display="");
+  document.getElementById("stepUpload").style.display="";
+  document.getElementById("manualBtn").style.display="";
+  document.getElementById("stepReuse").style.display="";
+  entryMode="new";
+  renderReuseList();
+  syncShareNote();
+  m.classList.add("on");
+}
+/* 私有记录不需要「分享备注」 */
+function syncShareNote(){
+  const v=document.getElementById("fVisibility").value;
+  document.getElementById("shareNoteWrap").style.display=(v==="public")?"":"none";
+}
+function openEditModal(id){
+  const it=items.find(x=>x.id===id); if(!it) return;
+  const m=document.getElementById("itemModal");
+  // 编辑：直接展开全部字段；图片区保留（可追加 / 删除 / 重新识别）
+  entryMode="edit"; reuseId=null;
+  document.getElementById("stepUpload").style.display="";
+  document.getElementById("manualBtn").style.display="none";
+  document.getElementById("stepReuse").style.display="none";
+  document.querySelectorAll("#stepFields .only-new").forEach(el=>el.style.display="");
+  document.getElementById("stepFields").style.display="";
+  document.getElementById("stepShare").style.display="";
+  document.getElementById("itemTitle").textContent="编辑记录 #"+id;
+  document.getElementById("fId").value=id;
+  clearOcrExtra();
+  document.getElementById("fName").value=it.name||"";
+  document.getElementById("fPrice").value=it.price!=null?it.price:"";
+  document.getElementById("fCategory").value=it.category||"其他";
+  document.getElementById("fChannel").value=it.channel||"";
+  document.getElementById("fDate").value=it.purchase_date||todayStr();
+  document.getElementById("fReview").value=it.review||"";
+  document.getElementById("fVisibility").value=it.visibility||"public";
+  document.getElementById("fShareNote").value=it.share_note||"";
+  document.getElementById("fImg").value="";
+  // 必须回填：submitItem 会提交这些字段，不回填等于用空值覆盖原值
+  document.getElementById("fBrand").value=it.brand||"";
+  document.getElementById("fQuantity").value=it.quantity!=null?it.quantity:"1";
+  document.getElementById("fExpiry").value=it.expiry_date||"";
+  document.getElementById("fShelf").value=it.shelf_life||"";
+  document.getElementById("fIngredients").value=it.ingredients||"";
+  document.getElementById("fRepurchase").value=it.repurchase||"";
+  // 已有图片全部列出来，可单张删除
+  formImages=(it.images||[]).slice(); uploading=0;
+  renderThumbs(); updateImgHint();
+  syncShareNote();
+  m.classList.add("on");
+}
+function submitItem(){
+  const id=document.getElementById("fId").value;
+  const name=document.getElementById("fName").value.trim();
+  const price=parseFloat(document.getElementById("fPrice").value);
+  const category=document.getElementById("fCategory").value;
+  const channel=document.getElementById("fChannel").value.trim();
+  const date=document.getElementById("fDate").value;
+  const review=document.getElementById("fReview").value.trim();
+  const isReuse = entryMode==="reuse" && reuseId;
+  if(!isReuse && !name){ alert("请填写名称"); return; }
+  if(isNaN(price)){ alert("请填写有效价格"); return; }
+  if(uploading>0){ alert("图片还在上传，请稍候再保存"); return; }
+  const base={name,price,category,brand:document.getElementById("fBrand").value.trim(),
+    channel,quantity:document.getElementById("fQuantity").value||"1",
+    purchase_date:date,review,
+    expiry_date:document.getElementById("fExpiry").value||"",
+    shelf_life:document.getElementById("fShelf").value.trim(),
+    ingredients:document.getElementById("fIngredients").value.trim(),
+    repurchase:document.getElementById("fRepurchase").value||"",
+    visibility:document.getElementById("fVisibility").value||"public",
+    share_note:document.getElementById("fShareNote").value.trim()};
+  const imgs=formImages.slice();
+  const done=d=>{
+    if(d.ok){ document.getElementById("itemModal").classList.remove("on"); loadItems(); }
+    else alert("保存失败："+(d.error||"未知错误"));
+  };
+  if(isReuse){
+    // 复购已有商品：只新增一条购买记录
+    api("/add",{method:"POST",body:JSON.stringify({
+      item_id:reuseId, price, purchase_date:date, quantity:document.getElementById("fQuantity").value||"1",
+      channel, review:review||undefined
+    })}).then(done);
+    return;
+  }
+  if(id){
+    // 编辑：只走 update，不会新建记录。images 传最终保留的列表，
+    // 后端会对比原值，把被移除的磁盘文件一并删掉。
+    api("/update",{method:"POST",
+      body:JSON.stringify(Object.assign({},base,{id:+id,images:imgs}))}).then(done);
+    return;
+  }
+  if(imgs.length){
+    // 新增带图：图片已先上传，这里传路径，后端跳过重复落盘但仍做 OCR + 健康评分
+    api("/upload",{method:"POST",body:JSON.stringify(Object.assign({},base,{images:imgs}))}).then(done);
+  } else {
+    api("/add",{method:"POST",body:JSON.stringify(base)}).then(done);
+  }
+}
+
+function openSettings(){
+  const m=document.getElementById("settingsModal");
+  ["tokenMsg","pwdMsg","userMsg"].forEach(id=>{const e=document.getElementById(id); if(e) e.textContent="";});
+  api("/me").then(me=>{
+    if(!me.ok){ alert("读取账号信息失败："+(me.error||"未知错误")); return; }
+    document.getElementById("sUsername").textContent=me.username||"-";
+    document.getElementById("sRole").textContent=me.is_admin?"管理员":"普通用户";
+    document.getElementById("sCreated").textContent=me.created_at||"-";
+    // Token 展示：优先用 /api/settings 返回的明文（本人可见）
+    api("/settings").then(d=>{
+      if(d.ok){
+        const s=d.system||{}, u=d.user||{};
+        // 本人可见明文；只有拿不到时才回退到脱敏（历史行为是永远脱敏，导致复制出来是星号）
+        ME_TOKEN=u.token||"";
+        const box=document.getElementById("sTokenShow");
+        box.textContent=ME_TOKEN||u.token_masked||"（无法读取，请点重置）";
+        box.classList.toggle("masked", !ME_TOKEN);
+        document.getElementById("sAllowReg").checked=(String(s.allow_register)==="1");
+      }
+      if(me.is_admin){
+        document.getElementById("adminSec").style.display="";
+        // 每次打开设置都回到「全部用户」页签，避免上次停在回收站导致页签样式与内容错位
+        switchUserTab(false);
+      } else {
+        document.getElementById("adminSec").style.display="none";
+      }
+      m.classList.add("on");
+    });
+  });
+}
+/* ---- Token ---- */
+function copyToken(){
+  // 从变量取，不从 DOM 取：DOM 里可能是脱敏文本或带换行
+  const t=ME_TOKEN||"";
+  const msg=document.getElementById("tokenMsg");
+  if(!t){ msg.textContent="读不到 Token，请关掉设置重开一次"; msg.style.color="var(--bad)"; return; }
+  const done=()=>{ msg.textContent="已复制到剪贴板 ✓"; msg.style.color="var(--good)"; };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(()=>{
+      msg.textContent="复制失败，请手动选中复制"; msg.style.color="var(--bad)";
+    });
+  } else {
+    const ta=document.createElement("textarea");
+    ta.value=t; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }
+    catch(e){ msg.textContent="复制失败，请手动选中"; msg.style.color="var(--bad)"; }
+    document.body.removeChild(ta);
+  }
+}
+function resetToken(){
+  const msg=document.getElementById("tokenMsg");
+  if(!confirm("重置后旧 Token 立即失效，CLI / skill 需重新配置。继续吗？")) return;
+  api("/token",{method:"POST",body:"{}"}).then(d=>{
+    if(d.ok){
+      ME_TOKEN=d.token||"";
+      const box=document.getElementById("sTokenShow");
+      box.textContent=ME_TOKEN; box.classList.remove("masked");
+      msg.textContent="已重置 ✓ 新 Token 已生效，CLI / skill 需更新配置"; msg.style.color="var(--good)";
+    } else {
+      msg.textContent=d.error||"重置失败"; msg.style.color="var(--bad)";
+    }
+  });
+}
+/* ---- 改密 ---- */
+function savePassword(){
+  const msg=document.getElementById("pwdMsg");
+  const oldp=document.getElementById("sOldPwd").value;
+  const p1=document.getElementById("sNewPwd").value;
+  const p2=document.getElementById("sNewPwd2").value;
+  if(!oldp||!p1){ msg.textContent="请填写当前密码和新密码"; msg.style.color="var(--bad)"; return; }
+  if(p1!==p2){ msg.textContent="两次输入的新密码不一致"; msg.style.color="var(--bad)"; return; }
+  if(p1.length<8){ msg.textContent="新密码至少 8 位"; msg.style.color="var(--bad)"; return; }
+  api("/password",{method:"POST",
+    body:JSON.stringify({old_password:oldp,new_password:p1})}).then(d=>{
+    if(d.ok){
+      msg.textContent="已修改 ✓ 请用新密码重新登录"; msg.style.color="var(--good)";
+      setTimeout(()=>{ location.href="/login.html"; }, 1500);
+    } else {
+      msg.textContent=d.error||"修改失败"; msg.style.color="var(--bad)";
+    }
+  });
+}
+/* ---- 管理员：用户管理 ---- */
+let userBinMode=false;
+function switchUserTab(bin){
+  userBinMode=!!bin;
+  document.getElementById("tabUsers").classList.toggle("primary",!userBinMode);
+  document.getElementById("tabBin").classList.toggle("primary",userBinMode);
+  document.getElementById("userBinHint").style.display=userBinMode?"":"none";
+  loadUsers();
+}
+function loadUsers(){
+  const msg=document.getElementById("userMsg");
+  msg.textContent="";
+  api("/users"+(userBinMode?"?bin=1":"")).then(d=>{
+    if(!d.ok){ msg.textContent=d.error||"加载失败"; return; }
+    const box=document.getElementById("userList");
+    const list=d.users||[];
+    if(!list.length){
+      box.innerHTML='<div class="st-hint">'+(userBinMode?"回收站是空的。":"还没有其他用户。")+'</div>';
+      return;
+    }
+    box.innerHTML=list.map(u=>{
+      const active=(u.is_active!==0 && u.is_active!==false);
+      if(userBinMode){
+        return `<div class="u-row" data-uid="${u.id}">
+          <span class="un">${esc(u.username)}</span>
+          <span class="badge off">回收站</span>
+          ${u.is_admin?'<span class="badge adm">管理员</span>':""}
+          <span class="um">${u.item_count||0} 条记录</span>
+          <span class="acts">
+            <button data-act="restore">恢复</button>
+            <button class="danger" data-act="purge" data-cnt="${u.item_count||0}">永久删除</button>
+          </span>
+        </div>`;
+      }
+      const badges=[
+        u.is_admin?'<span class="badge adm">管理员</span>':'',
+        active?'':'<span class="badge off">已停用</span>'
+      ].join(" ");
+      return `<div class="u-row" data-uid="${u.id}">
+        <span class="un">${esc(u.username)}</span>
+        ${badges}
+        <span class="um">${u.item_count||0} 条记录</span>
+        <span class="acts">
+          <button data-act="toggle" data-active="${active?1:0}">${active?"停用":"启用"}</button>
+          <button data-act="admin" data-admin="${u.is_admin?1:0}">${u.is_admin?"取消管理员":"设为管理员"}</button>
+          <button data-act="pwd">重置密码</button>
+          <button class="danger" data-act="del">移入回收站</button>
+        </span>
+      </div>`;
+    }).join("");
+    box.querySelectorAll("button[data-act]").forEach(b=>{
+      b.addEventListener("click",e=>{
+        e.stopPropagation();
+        const row=b.closest(".u-row");
+        const uid=+row.dataset.uid;
+        const uname=row.querySelector(".un").textContent;
+        const act=b.dataset.act;
+        if(act==="toggle"){
+          const next=b.dataset.active==="1"?false:true;
+          userAction("/api/users/active",{id:uid,active:next});
+        } else if(act==="admin"){
+          const next=b.dataset.admin==="1"?false:true;
+          userAction("/api/users/admin",{id:uid,admin:next});
+        } else if(act==="pwd"){
+          const np=prompt(`为「${uname}」设置新密码（至少8位，含字母/数字/符号两类）：`);
+          if(np) userAction("/api/users/password",{id:uid,new_password:np});
+        } else if(act==="del"){
+          if(confirm(`把用户「${uname}」移入回收站？\n\n数据会完整保留，可随时恢复；账号将无法登录。`)){
+            userAction("/api/users/delete",{id:uid});
+          }
+        } else if(act==="restore"){
+          userAction("/api/users/restore",{id:uid});
+        } else if(act==="purge"){
+          if(confirm(`永久删除用户「${uname}」及其 ${b.dataset.cnt||0} 条记录？\n\n⚠️ 这一步不可恢复，记录、扩展字段和图片文件都会被真正删除。`)){
+            userAction("/api/users/purge",{id:uid});
+          }
+        }
+      });
+    });
+  });
+}
+function userAction(path,body){
+  const msg=document.getElementById("userMsg");
+  api(path,{method:"POST",body:JSON.stringify(body)}).then(d=>{
+    if(d.ok){ msg.textContent="操作成功 ✓"; msg.style.color="var(--good)"; loadUsers(); }
+    else { msg.textContent=d.error||"操作失败"; msg.style.color="var(--bad)"; }
+  });
+}
+function logout(){
+  if(!confirm("确定退出登录吗？")) return;
+  // Cookie 是 HttpOnly 的，JS 删不掉 —— 必须让服务端下发过期头，
+  // 否则页面跳走了 Cookie 还在，一刷新又自动登录回来（这就是之前「退不出去」的原因）
+  api("/logout",{method:"POST",body:"{}"})
+    .catch(()=>{})
+    .finally(()=>{ location.href="/login.html"; });
+}
+
+document.addEventListener("keydown",e=>{
+  const lbOn=document.getElementById("lb").classList.contains("on");
+  if(lbOn){
+    if(e.key==="Escape")document.getElementById("lb").classList.remove("on");
+    if(e.key==="ArrowRight")document.getElementById("lbNext").click();
+    if(e.key==="ArrowLeft")document.getElementById("lbPrev").click();
+  }
+});
+
+/* 交互 */
+document.getElementById("q").oninput=e=>{state.q=e.target.value.trim();render();};
+document.getElementById("fImg").onchange=refreshImgName;
+document.getElementById("ocrBtn").onclick=runOcr;
+document.getElementById("range").onchange=e=>{state.range=e.target.value;render();};
+document.getElementById("sort").onchange=e=>{state.sort=e.target.value;render();};
+document.getElementById("repurchase").onchange=e=>{state.repurchase=e.target.value;render();};
+document.getElementById("ratingFilter").onchange=e=>{state.rating=e.target.value;render();};
+document.getElementById("healthFilter").onchange=e=>{state.health=e.target.value;render();};
+document.getElementById("shop").onchange=e=>{state.shop=e.target.value;render();};
+document.querySelectorAll(".seg-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    state.view=btn.dataset.view;
+    document.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("on",x.dataset.view===state.view));
+    render();
+  };
+});
+document.getElementById("csvBtn").onclick=()=>{
+  const list=filtered();
+  const head=["日期","分类","名称","品牌","价格","数量","渠道","评分","评价","标签","回购"];
+  const esc2=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
+  const body=list.map(i=>[i.purchase_date,i.category,i.name,i.brand,i.price,i.quantity,i.channel,i.rating,i.review,(i.tags||[]).join("/"),i.repurchase].map(esc2).join(","));
+  const csv="\uFEFF"+head.join(",")+"\n"+body.join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="购物记录_筛选结果.csv"; a.click();
+};
+
+/* 深色模式 */
+(function(){
+  const saved=localStorage.getItem("shoplog-theme");
+  if(saved==="dark") document.documentElement.dataset.theme="dark";
+  const btn=document.getElementById("themeBtn");
+  const sync=()=>{btn.textContent = document.documentElement.dataset.theme==="dark"?"☀️ 浅色模式":"🌙 深色模式";};
+  sync();
+  btn.onclick=()=>{
+    const dark=document.documentElement.dataset.theme==="dark";
+    if(dark) delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme="dark";
+    localStorage.setItem("shoplog-theme", dark?"":"dark");
+    sync();
+  };
+})();
+
+/* 0.1 多用户交互绑定 */
+document.getElementById("addBtn").onclick=openAddModal;
+document.getElementById("settingsBtn").onclick=openSettings;
+document.getElementById("modalClose").onclick=()=>document.getElementById("itemModal").classList.remove("on");
+document.getElementById("settingsClose").onclick=()=>document.getElementById("settingsModal").classList.remove("on");
+document.getElementById("itemSave").onclick=submitItem;
+/* 传图区：点击选择 + 拖拽上传 */
+(function(){
+  const zone=document.getElementById("dropZone"), inp=document.getElementById("fImg");
+  zone.onclick=()=>inp.click();
+  inp.onchange=()=>refreshImgName();
+  ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); zone.classList.add("over");
+  }));
+  ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); zone.classList.remove("over");
+  }));
+  zone.addEventListener("drop",e=>{
+    const fs=(e.dataTransfer&&e.dataTransfer.files)||[];
+    if(!fs.length) return;
+    // 拖拽的文件塞回 input，统一走 refreshImgName 的上传逻辑
+    try{
+      const dt=new DataTransfer();
+      Array.from(fs).forEach(f=>{ if(f.type.startsWith("image/")) dt.items.add(f); });
+      inp.files=dt.files;
+    }catch(err){ /* 老浏览器不支持 DataTransfer：忽略，用户可点选 */ }
+    refreshImgName();
+  });
+})();
+document.getElementById("manualBtn").onclick=()=>{ setEntryMode("new"); revealFields(); updateImgHint(); };
+document.getElementById("reuseSearch").oninput=()=>renderReuseList();
+document.getElementById("logoutBtn").onclick=logout;
+document.getElementById("tokenCopyBtn").onclick=copyToken;
+document.getElementById("tokenResetBtn").onclick=resetToken;
+document.getElementById("pwdSaveBtn").onclick=savePassword;
+document.getElementById("fVisibility").onchange=syncShareNote;
+document.getElementById("tabUsers").onclick=()=>switchUserTab(false);
+document.getElementById("tabBin").onclick=()=>switchUserTab(true);
+document.getElementById("sAllowReg").onchange=e=>{
+  api("/settings",{method:"POST",
+    body:JSON.stringify({allow_register:e.target.checked?"1":"0"})}).then(d=>{
+    const msg=document.getElementById("userMsg");
+    if(d.ok){ msg.textContent="已保存 ✓"; msg.style.color="var(--good)"; }
+    else { msg.textContent=d.error||"保存失败"; msg.style.color="var(--bad)"; }
+  });
+};
+document.addEventListener("click",e=>{
+  const ed=e.target.closest(".edit");
+  if(ed){ e.stopPropagation(); openEditModal(+ed.dataset.id); }
+  const rb=e.target.closest(".rebuy");
+  if(rb){ e.stopPropagation(); openRepurchase(+rb.dataset.id); }
+  const pd=e.target.closest(".pdel");
+  if(pd){ e.stopPropagation(); deletePurchase(+pd.dataset.pid,+pd.dataset.iid); }
+});
+
+/* 删掉某一次购买（误记的这次），商品档案保留 */
+function deletePurchase(pid,iid){
+  const it=items.find(x=>x.id===iid);
+  const label=it?`「${it.name}」的这一次购买记录`:"这条购买记录";
+  if(!confirm(`确定删掉${label}？商品本身会保留。`)) return;
+  api("/purchase/delete",{method:"POST",body:JSON.stringify({id:pid})}).then(d=>{
+    if(d.ok){ loadItems(); }
+    else alert("删除失败："+(d.error||"未知错误"));
+  }).catch(e=>alert("删除失败："+e.message));
+}
+[["itemModal","itemModal"],["settingsModal","settingsModal"]].forEach(([id])=>{
+  document.getElementById(id).addEventListener("click",e=>{
+    if(e.target.id===id) e.target.classList.remove("on");
+  });
+});
+
+loadMe().then(()=>loadItems());
+
+/* 右下角版本号：读免鉴权的 /api/version，用来确认线上跑到哪个版本 */
+(function(){
+  var el=document.getElementById("verBadge");
+  fetch("/api/version",{headers:{"Accept":"application/json"}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      el.textContent="v"+(d.version||"未知");
+      el.title="当前部署版本 v"+(d.version||"未知");
+    })
+    .catch(function(){ el.textContent="v未知"; });
+})();
+</script>
+</body>
+</html>
