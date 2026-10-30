@@ -5,6 +5,16 @@
 
 ---
 
+## 0.6.11（2026-10-31）
+
+**修：deploy.sh 误判 supervisord 没在跑，退回双 fork 抢端口**
+
+- 存活探测原来用 `supervisorctl pid supervisord`，但 supervisord 自身不在进程表里，
+  这条恒定失败 → deploy 走「双 fork」兜底分支，于是 supervisord 托管的实例和 deploy 起的
+  进程抢 8787 端口。改成用 `supervisorctl status` 探测 Unix socket 是否可用。
+- 顺手把 deploy.sh / install-service.sh 里 `$VAR` 紧邻全角标点（`，`）的写法统一成
+  `${VAR}`：macOS bash 3.2 会把全角符号并入变量名，`set -u` 下直接报 `unbound variable`。
+
 ## 0.6.10（2026-10-30）
 
 **常驻方式改由 supervisord 托管（不再自己 nohup / double-fork）**
