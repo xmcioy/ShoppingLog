@@ -148,7 +148,7 @@ wait_health() {
   return 1
 }
 
-if [ -n "$SUP_CTL" ] && [ -f "$SUP_CONF" ] && sup pid supervisord >/dev/null 2>&1; then
+if [ -n "$SUP_CTL" ] && [ -f "$SUP_CONF" ] && sup status >/dev/null 2>&1; then
   MANAGED_BY="supervisor:$PROG"
   if sup status "$PROG" >/dev/null 2>&1; then
     log "supervisor 托管中，执行 supervisorctl restart $PROG"
