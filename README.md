@@ -1,6 +1,6 @@
 # ShoppingLog
 
-**当前版本：v0.6.10**
+**当前版本：v0.6.13**
 
 多用户购物记录服务：记下每一次买的东西、花多少钱、值不值得回购。网页 / 命令行 / AI 客户端三种入口，
 SQLite / MySQL 双后端，识别与评分全部在本地完成，不上任何模型 API。
@@ -60,7 +60,7 @@ bash scripts/install-service.sh --status    # 看状态：state = running 表示
 bash scripts/install-service.sh --uninstall # 不再自启
 
 托管后：登录后自动拉起、崩溃自动重启（MySQL 还没就绪时会重试直到连上）。
-日常升级直接 `bash scripts/deploy.sh`：script会自动识别托管方式（supervisord → LaunchAgent → 双 fork），
+日常升级直接 `bash scripts/deploy.sh`：脚本会自动识别托管方式（supervisord → LaunchAgent → 双 fork），
 按对应方式重启服务并校验版本，不会把服务降级成脱离托管的裸进程。
 ```
 
