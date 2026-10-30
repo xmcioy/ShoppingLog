@@ -1,6 +1,6 @@
 # ShoppingLog
 
-**Current version: v0.6.2**
+**Current version: v0.6.9**
 
 Multi-user shopping log: what you bought, what it cost, and whether it's worth buying again.
 Web / CLI / AI-client entry points, SQLite or MySQL backend, and all recognition & scoring happens

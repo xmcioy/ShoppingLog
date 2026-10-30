@@ -1,6 +1,6 @@
 # ShoppingLog
 
-**当前版本：v0.6.2**
+**当前版本：v0.6.9**
 
 多用户购物记录服务：记下每一次买的东西、花多少钱、值不值得回购。网页 / 命令行 / AI 客户端三种入口，
 SQLite / MySQL 双后端，识别与评分全部在本地完成，不上任何模型 API。
@@ -48,8 +48,15 @@ nohup python3 scripts/server.py --port 8787 >> logs/server.log 2>&1 &
 # 4. nginx 对外（参考 docs/nginx.shopping.conf.example）
 #    监听 8088：静态页面 + /api/* 反代；/api/mcp 单独放行并透传 Authorization
 
-# 5. 开机自启（可选）
-bash scripts/install-service.sh
+# 5. 开机自启（可选，macOS LaunchAgent）
+bash scripts/install-service.sh            # 写 plist + 注册。注意：要在普通终端里跑，
+                                            # 受限终端/沙箱里 launchctl 会报 Input/output error
+bash scripts/install-service.sh --status    # 看状态：state = running 表示已托管
+bash scripts/install-service.sh --uninstall # 不再自启
+
+注册后：登录后自动拉起、崩溃自动重启（MySQL 还没就绪时会重试直到连上）。
+日常升级直接 `bash scripts/deploy.sh`：已注册 LaunchAgent 时它会自动改用 `launchctl kickstart` 重启，
+不会被降级成脱离托管的裸进程。
 ```
 
 打开 `http://localhost:8088`。首次部署会自动创建管理员，账号密码写在 `data/INITIAL_ADMIN.txt`，

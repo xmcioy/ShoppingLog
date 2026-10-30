@@ -5,6 +5,19 @@
 
 ---
 
+## 0.6.9（2026-10-30）
+
+**开机自启：LaunchAgent 托管链路补齐**
+
+- `install-service.sh`：写 `~/Library/LaunchAgents/com.meria.shoppinglog.plist`
+  （RunAtLoad + KeepAlive + 崩溃自动拉起），解释器自动挑「装了 pymysql 的那个」。
+  之前脚本一遇 `launchctl bootstrap` 失败就把服务停在「已 kill 未重启」的状态，
+  现在注册失败会先用守护进程方式把服务原样拉回来，并打印该在普通终端执行的两行注册命令。
+- `deploy.sh`：检测到 LaunchAgent 已注册时改用 `launchctl kickstart -k` 重启，
+  不再 kill 后另行双 fork（否则 KeepAlive 立刻重建的实例会与 deploy 起的进程抢 8787 端口，
+  托管身份也被破坏）；没注册时行为不变。
+- README：版本号同步到 0.6.9，第 5 步补 `--status` / `--uninstall` 与「必须在普通终端执行」提示。
+
 ## 0.6.7（2026-10-28）
 
 **修：品类扩展表列漂移导致记录列表直接 500**

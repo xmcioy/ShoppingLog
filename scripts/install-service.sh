@@ -22,6 +22,7 @@ APP="${SHOPLOG_APP:-$HOME/myapp/shoppinglog}"
 PORT="${SHOPLOG_PORT:-8787}"
 LABEL="com.meria.shoppinglog"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+DOMAIN="gui/$(id -u)"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 log() { echo "[service] $*"; }
@@ -53,13 +54,13 @@ pick_python() {
 
 case "${1:-}" in
   --uninstall)
-    launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+    launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
     rm -f "$PLIST"
     log "已卸载 ${LABEL}（服务已停止，不会自启）"
     exit 0
     ;;
   --status)
-    launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | grep -E "^\s+(state|pid|last exit code) =" || echo "未安装"
+    launchctl print "$DOMAIN/$LABEL" 2>/dev/null | grep -E "^\s+(state|pid|last exit code) =" || echo "未安装"
     exit 0
     ;;
 esac
@@ -111,12 +112,33 @@ PLISTEOF
 
 plutil -lint "$PLIST" >/dev/null || die "plist 语法校验失败"
 
-# 先停掉占用端口的旧进程，避免新服务起不来
+# 注册（bootstrap）。这一步在受限终端/沙箱里会失败（Bootstrap failed: 5: Input/output error），
+# 所以顺序上要「宁可注册失败，也别把正在跑的服务留在停止状态」：注册不成就用守护进程方式
+# 原样拉回来，并打印用户终端里该执行的两行命令。
 OLD=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)
-[ -n "$OLD" ] && kill "$OLD" 2>/dev/null && sleep 1 && log "已停止旧进程 $OLD"
+launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+if [ -n "$OLD" ]; then
+  kill "$OLD" 2>/dev/null && sleep 1 && log "已停止旧进程 $OLD"
+fi
 
-launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "$PLIST" || die "launchctl bootstrap 失败（请在普通终端里运行，不要在沙箱/受限环境）"
+if ! launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null; then
+  log "WARN: launchctl bootstrap 失败（受限终端常见，本环境不允许注册 launchd）"
+  log "plist 已写好: $PLIST"
+  log "请在**普通终端**里执行这两行完成注册（注册后开机自启 + 崩溃自动拉起才生效）："
+  log "  launchctl bootout $DOMAIN/$LABEL 2>/dev/null; launchctl bootstrap $DOMAIN $PLIST"
+  log "  bash scripts/install-service.sh --status   # 确认 state = running"
+  # 兜底：先把服务拉起来，别让它停着
+  mkdir -p "$APP/logs"
+  (cd "$SRC" && SHOPLOG_ROOT="$APP" SHOPLOG_LOG="$APP/logs/server.log" SHOPLOG_CWD="$SRC" \
+    "$PY" scripts/start_daemon.py scripts/server.py --port "$PORT" >/dev/null)
+  sleep 2
+  if curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null; then
+    log "已用守护进程方式临时拉起 http://127.0.0.1:$PORT/api/health（能用，但重启后不会自启）"
+    exit 0
+  fi
+  tail -20 "$APP/logs/server.log" >&2
+  die "服务拉起失败"
+fi
 
 sleep 3
 if curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null; then
