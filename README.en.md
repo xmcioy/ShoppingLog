@@ -1,6 +1,6 @@
 # ShoppingLog
 
-**Current version: v0.6.9**
+**Current version: v0.6.10**
 
 Multi-user shopping log: what you bought, what it cost, and whether it's worth buying again.
 Web / CLI / AI-client entry points, SQLite or MySQL backend, and all recognition & scoring happens
@@ -55,9 +55,21 @@ nohup python3 scripts/server.py --port 8787 >> logs/server.log 2>&1 &
 # 4. expose it with nginx (see docs/nginx.shopping.conf.example)
 #    listening on 8088: static pages + /api/* proxy; /api/mcp passes Authorization through
 
-# 5. autostart (optional)
-bash scripts/install-service.sh
+# 5. keep it running (recommended: supervisord - autostart + crash recovery)
+cp docs/supervisor.shoppinglog.ini.example ~/myapp/supervisor/conf.d/shoppinglog.ini   # adjust paths
+supervisorctl -c ~/myapp/supervisor/supervisord.conf reread && update
+supervisorctl -c ~/myapp/supervisor/supervisord.conf status shoppinglog   # should be RUNNING
+
+# 5b. no supervisord? fall back to macOS ~/Library/LaunchAgents
+bash scripts/install-service.sh            # writes the plist and registers it. Run this in a normal
+                                            # terminal: launchctl fails with Input/output error in a sandbox
+bash scripts/install-service.sh --status    # state = running means supervised
+bash scripts/install-service.sh --uninstall # disable autostart
 ```
+
+Once supervised it restarts after crashes and comes back after login/reboot.
+Upgrades are just `bash scripts/deploy.sh` - it detects the supervisor (supervisord > LaunchAgent >
+double-fork) and restarts the service the right way instead of leaving an unmanaged process behind.
 
 Open `http://localhost:8088`. On first deploy an admin account is created and written to
 `data/INITIAL_ADMIN.txt` — change the password and delete that file right after login.

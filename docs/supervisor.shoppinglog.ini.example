@@ -1,0 +1,30 @@
+; ShoppingLog API（127.0.0.1:8787，nginx 8088 反代过来）
+; 用法示例：
+;   cp docs/supervisor.shoppinglog.ini.example ~/myapp/supervisor/conf.d/shoppinglog.ini
+;   supervisorctl -c ~/myapp/supervisor/supervisord.conf reread && update
+;
+; 说明：
+;   - server.py 是前台进程（ThreadingHTTPServer），交给 supervisord 直接托管即可，
+;     不需要再用 start_daemon.py / nohup —— 否则会出现两个进程抢同一个端口
+;   - SHOPLOG_ROOT 指向运行数据目录（配置/图片/日志/SQLite），源码目录只放代码
+;   - 部署升级统一走 `bash scripts/deploy.sh`：检测到 supervisord 存活时会自动
+;     执行 `supervisorctl restart shoppinglog`（日志里会标 托管方式: supervisor:shoppinglog）
+;   - supervisord 自身由 launchd 托管（开机自启 + 被杀复活），
+;     脚本：~/myapp/supervisor/enable-autostart.sh（需在普通终端执行一次）
+
+[program:shoppinglog]
+command=/Users/meria/.local/share/uv/python/cpython-3.14-macos-aarch64-none/bin/python3.14 scripts/server.py --port 8787
+directory=/Users/meria/project/ShoppingLog
+environment=SHOPLOG_ROOT="/Users/meria/myapp/shoppinglog",PATH="/Users/meria/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+autostart=true
+autorestart=true
+startsecs=5
+startretries=3
+stopsignal=TERM
+stopwaitsecs=10
+stopasgroup=true
+killasgroup=true
+stdout_logfile=/Users/meria/myapp/shoppinglog/logs/server.log
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=3
+redirect_stderr=true

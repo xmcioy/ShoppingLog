@@ -115,35 +115,82 @@ fi
 
 log "升级部署: 重启服务 (port $PORT)"
 
-# LaunchAgent 优先：服务注册过 launchd 时，kill + 自起会把「谁负责托管」搞乱 ——
-# 这里交给 launchctl kickstart 重启（开机自启/崩溃拉起的身份保持不变）；
-# 没注册（或受限终端里 launchctl 不可用）才退回双 fork 守护进程。
+# 托管方式优先级：supervisor > LaunchAgent > 双 fork 守护进程。
+# 本机统一用 supervisord 托管各服务（配置目录 $HOME/myapp/supervisor，
+# 服务 ini 放 conf.d/），所以只要 supervisord 活着，就走 supervisorctl 重启，
+# 不再自己 nohup/double-fork —— 否则会出现两个进程抢同一个端口、谁也不负责拉活。
 LABEL="com.meria.shoppinglog"
 DOMAIN="gui/$(id -u)"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+PROG="shoppinglog"
+SUP_CONF="${SHOPLOG_SUPERVISOR_CONF:-$HOME/myapp/supervisor/supervisord.conf}"
+SUP_CTL="${SHOPLOG_SUPERVISOR_CTL:-}"
 mkdir -p "$APP/logs"
 cd "$SRC"
 
-if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
-  log "检测到 LaunchAgent $LABEL 已注册，改用 launchctl kickstart 重启"
-  launchctl kickstart -k "$DOMAIN/$LABEL" || die "launchctl kickstart 失败（服务可能未重启）"
-  sleep 3
+# 找 supervisorctl：环境变量 > supervisor 自带的那个 > PATH 上的
+if [ -z "$SUP_CTL" ]; then
+  for cand in \
+    "$HOME/.local/share/uv/python/cpython-3.14-macos-aarch64-none/bin/supervisorctl" \
+    "$(dirname "$PY" 2>/dev/null)/supervisorctl" \
+    "$(command -v supervisorctl || true)"; do
+    [ -n "$cand" ] && [ -x "$cand" ] && { SUP_CTL="$cand"; break; }
+  done
+fi
+sup() { "$SUP_CTL" -c "$SUP_CONF" "$@"; }
+
+# 等健康检查通过（服务刚被拉起时给点时间，最多 ~30s）
+wait_health() {
+  for _ in $(seq 1 15); do
+    curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  return 1
+}
+
+if [ -n "$SUP_CTL" ] && [ -f "$SUP_CONF" ] && sup pid supervisord >/dev/null 2>&1; then
+  MANAGED_BY="supervisor:$PROG"
+  if sup status "$PROG" >/dev/null 2>&1; then
+    log "supervisor 托管中，执行 supervisorctl restart $PROG"
+    if ! sup restart "$PROG" >/dev/null 2>&1; then
+      log "WARN: supervisorctl restart 返回非 0（可能还在启动），继续等健康检查"
+    fi
+  else
+    # 首次纳管：先放掉占着 8787 的旧进程，否则新进程起不来会一直重试
+    PID=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
+    if [ -n "$PID" ]; then
+      kill "$PID" 2>/dev/null || true
+      sleep 2
+      log "已停止旧进程 $PID"
+    fi
+    log "supervisor 里还没有 ${PROG}，执行 reread + update 纳管"
+    sup reread >/dev/null 2>&1
+    sup update >/dev/null 2>&1
+  fi
 else
+  if [ -f "$SUP_CONF" ]; then
+    log "提示: 有 ${SUP_CONF}，但 supervisorctl 不可用或 supervisord 没在跑，本次按老方式启动"
+  fi
+  MANAGED_BY="double-fork"
   PID=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
   if [ -n "$PID" ]; then
-    kill "$PID" && sleep 1
+    kill "$PID" 2>/dev/null || true
+    sleep 1
     log "已停止旧进程 $PID"
   fi
-  # 用 double-fork 守护进程启动：nohup 只忽略 SIGHUP，父进程组被回收时仍会被带走
+  # 双 fork 守护进程：nohup 只忽略 SIGHUP，父进程组被回收时仍会被带走
   # （那样会出现"DEPLOY_OK 通过、两秒后服务没了"）
   SHOPLOG_ROOT="$APP" SHOPLOG_LOG="$APP/logs/server.log" SHOPLOG_CWD="$SRC" \
     "$PY" scripts/start_daemon.py scripts/server.py --port "$PORT" >/dev/null
   sleep 2
-  [ -f "$PLIST" ] && log "提示: 检测到 $PLIST 但 launchd 未注册/不可查，本次按守护进程方式启动；想在开机自启时由 launchd 托管，请在普通终端执行 install-service.sh"
+  if [ -f "$PLIST" ]; then
+    log "提示: 检测到 ${PLIST}，本机已改用 supervisord 托管，$PLIST 可以删掉避免两套托管打架"
+  fi
 fi
 
-if curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null; then
-  log "DEPLOY_OK  http://127.0.0.1:$PORT/api/health"
+# 最终校验：supervisor 重启后进程可能还在起来，这里轮询而不是一锤子买卖
+if wait_health; then
+  log "DEPLOY_OK  http://127.0.0.1:$PORT/api/health （托管方式: ${MANAGED_BY}）"
 else
   log "DEPLOY_FAIL 最近日志:"
   tail -20 "$APP/logs/server.log" >&2

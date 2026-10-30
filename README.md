@@ -1,6 +1,6 @@
 # ShoppingLog
 
-**当前版本：v0.6.9**
+**当前版本：v0.6.10**
 
 多用户购物记录服务：记下每一次买的东西、花多少钱、值不值得回购。网页 / 命令行 / AI 客户端三种入口，
 SQLite / MySQL 双后端，识别与评分全部在本地完成，不上任何模型 API。
@@ -48,15 +48,20 @@ nohup python3 scripts/server.py --port 8787 >> logs/server.log 2>&1 &
 # 4. nginx 对外（参考 docs/nginx.shopping.conf.example）
 #    监听 8088：静态页面 + /api/* 反代；/api/mcp 单独放行并透传 Authorization
 
-# 5. 开机自启（可选，macOS LaunchAgent）
+# 5. 常驻托管（推荐 supervisord 统一托管，开机自启 + 崩溃自动拉起）
+cp docs/supervisor.shoppinglog.ini.example ~/myapp/supervisor/conf.d/shoppinglog.ini   # 按需改路径
+supervisorctl -c ~/myapp/supervisor/supervisord.conf reread && update
+supervisorctl -c ~/myapp/supervisor/supervisord.conf status shoppinglog   # 应为 RUNNING
+
+# 5b. 没有 supervisord 的机器可退化为 macOS ~/Library/LaunchAgents
 bash scripts/install-service.sh            # 写 plist + 注册。注意：要在普通终端里跑，
                                             # 受限终端/沙箱里 launchctl 会报 Input/output error
 bash scripts/install-service.sh --status    # 看状态：state = running 表示已托管
 bash scripts/install-service.sh --uninstall # 不再自启
 
-注册后：登录后自动拉起、崩溃自动重启（MySQL 还没就绪时会重试直到连上）。
-日常升级直接 `bash scripts/deploy.sh`：已注册 LaunchAgent 时它会自动改用 `launchctl kickstart` 重启，
-不会被降级成脱离托管的裸进程。
+托管后：登录后自动拉起、崩溃自动重启（MySQL 还没就绪时会重试直到连上）。
+日常升级直接 `bash scripts/deploy.sh`：script会自动识别托管方式（supervisord → LaunchAgent → 双 fork），
+按对应方式重启服务并校验版本，不会把服务降级成脱离托管的裸进程。
 ```
 
 打开 `http://localhost:8088`。首次部署会自动创建管理员，账号密码写在 `data/INITIAL_ADMIN.txt`，
@@ -84,3 +89,4 @@ bash scripts/install-service.sh --uninstall # 不再自启
 | [docs/MYSQL.md](docs/MYSQL.md) | MySQL 部署与迁移 |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | 后续计划 |
 | [docs/nginx.shopping.conf.example](docs/nginx.shopping.conf.example) | nginx 配置示例 |
+|[docs/supervisor.shoppinglog.ini.example](docs/supervisor.shoppinglog.ini.example) | supervisord 服务配置模板 |

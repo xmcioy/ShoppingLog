@@ -5,6 +5,23 @@
 
 ---
 
+## 0.6.10（2026-10-30）
+
+**常驻方式改由 supervisord 托管（不再自己 nohup / double-fork）**
+
+- 服务纳管：新增 `~/myapp/supervisor/conf.d/shoppinglog.ini`（符合本机 supervisord 的
+  `conf.d/*.ini` 约定），进程名 `shoppinglog`，autostart + autorestart，
+  日志仍写 `~/myapp/shoppinglog/logs/server.log`。supervisord 自身由 launchd 托管，
+  所以整套链路是「开机自启 → supervisord → 各服务」。
+- `deploy.sh`：重启前先识别托管方式，**supervisord 优先**（`supervisorctl restart shoppinglog`；
+  第一次纳管时先放掉旧进程再 `reread + update`），其次 LaunchAgent（`launchctl kickstart`），
+  最后是双 fork 守护进程兜底。健康检查改成轮询（最多 ~30s），DEPLOY_OK 会打印托管方式。
+- `install-service.sh`：检测到 shoppinglog 已在 supervisord 里时直接让位并打印 `status`，
+  避免 LaunchAgent 与 supervisord 两套托管抢 8787 端口。
+- 仓库模板：`docs/supervisor.shoppinglog.ini.example`；README / README.en.md 第 5 步
+  改成 supervisord 优先，保留 LaunchAgent 作为无 supervisord 机器的退化方案。
+- 套路词清理：修正多处误植入的 "supervisorctl -c ~/myapp/supervisor/supervisord.conf" 尾缀。
+
 ## 0.6.9（2026-10-30）
 
 **开机自启：LaunchAgent 托管链路补齐**

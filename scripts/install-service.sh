@@ -52,6 +52,23 @@ pick_python() {
   return 1
 }
 
+# 本公司已经在用 supervisord 托管各服务（~/myapp/supervisor/conf.d/*.ini）。
+# 如果 shoppinglog 已经在 supervisord 里，就别再装 LaunchAgent —— 两套托管会抢同一个端口。
+SUP_CONF="${SHOPLOG_SUPERVISOR_CONF:-$HOME/myapp/supervisor/supervisord.conf}"
+SUP_CTL=""
+for cand in \
+  "$HOME/.local/share/uv/python/cpython-3.14-macos-aarch64-none/bin/supervisorctl" \
+  "$(command -v supervisorctl || true)"; do
+  if [ -n "$cand" ] && [ -x "$cand" ] && "$cand" -c "$SUP_CONF" pid shoppinglog >/dev/null 2>&1; then
+    SUP_CTL="$cand"; break
+  fi
+done
+if [ -n "$SUP_CTL" ]; then
+  log "supervisord 已在托管 shoppinglog（conf: ${SUP_CONF}），无需 LaunchAgent"
+  "$SUP_CTL" -c "$SUP_CONF" status shoppinglog || true
+  exit 0
+fi
+
 case "${1:-}" in
   --uninstall)
     launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
